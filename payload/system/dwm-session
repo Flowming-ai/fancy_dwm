@@ -1,0 +1,74 @@
+#!/bin/sh
+# One owner per X11 display; cleanup touches only children started here.
+set -eu
+[ "${XDG_SESSION_TYPE:-}" != wayland ] || { echo 'Log out and choose the DWM X11 session.' >&2; exit 1; }
+[ -n "${DISPLAY:-}" ] || { echo 'Start from the display manager or startx.' >&2; exit 1; }
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then exec dbus-run-session -- "$0" "$@"; fi
+export XDG_CURRENT_DESKTOP=dwm XDG_SESSION_DESKTOP=dwm XDG_SESSION_TYPE=x11
+export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"
+export TERMINAL=st EDITOR=nvim
+# st consults SHELL before the passwd entry. The installer also changes chsh.
+SHELL=$(command -v zsh 2>/dev/null || printf /bin/sh)
+export SHELL
+. "$HOME/.config/fcitx5/dwm-env.sh"
+dbus-update-activation-environment DISPLAY XAUTHORITY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE GTK_IM_MODULE QT_IM_MODULE XMODIFIERS GLFW_IM_MODULE PATH >/dev/null 2>&1 || :
+session_key=$(printf '%s' "$DISPLAY" | tr -c 'a-zA-Z0-9_-' '_')
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dwm"
+runtime="${XDG_RUNTIME_DIR:-$HOME/.local/state}/larbs-ubuntu-$session_key"
+mkdir -p "$state_dir" "$runtime"
+chmod 700 "$runtime"
+exec 9>"$runtime/session.lock"
+flock -n 9 || { echo 'DWM session already running on this display.' >&2; exit 1; }
+wm_pid='' picom_pid='' status_pid='' dunst_pid='' fcitx_pid='' saver_pid='' flameshot_pid=''
+stop_child() {
+    [ -n "$1" ] || return 0
+    # The child may already have exited. Do not signal a recycled/unrelated PID.
+    parent=$(awk '/^PPid:/ {print $2}' "/proc/$1/status" 2>/dev/null) || return 0
+    [ "$parent" = "$$" ] || return 0
+    kill "$1" 2>/dev/null || :
+}
+cleanup() {
+    trap - EXIT HUP INT TERM
+    for pid in "$wm_pid" "$status_pid" "$flameshot_pid" "$saver_pid" "$picom_pid" "$dunst_pid" "$fcitx_pid"; do
+        stop_child "$pid"
+    done
+    rm -f "$runtime/dwm.pid"
+}
+trap cleanup EXIT
+trap 'exit 0' HUP INT TERM
+xsetroot -solid '#282828' -cursor_name left_ptr
+if [ -f "$HOME/.local/share/larbs-ubuntu/wallpaper.jpg" ]; then
+    xwallpaper --zoom "$HOME/.local/share/larbs-ubuntu/wallpaper.jpg" || :
+fi
+picom --config "$HOME/.config/picom/picom.conf" >>"$state_dir/picom.log" 2>&1 9>&- &
+picom_pid=$!
+dunst -conf "$HOME/.config/dunst/dunstrc" >>"$state_dir/dunst.log" 2>&1 9>&- &
+dunst_pid=$!
+# --check prevents D-Bus from auto-starting an unintended second Fcitx process.
+if fcitx5-remote --check >/dev/null 2>&1; then
+    fcitx5-remote --check -x >/dev/null 2>&1 || :
+else
+    fcitx5 -D >>"$state_dir/fcitx5.log" 2>&1 9>&- &
+    fcitx_pid=$!
+fi
+if command -v xscreensaver >/dev/null 2>&1 && ! xscreensaver-command --version >/dev/null 2>&1; then
+    xscreensaver --no-splash >>"$state_dir/xscreensaver.log" 2>&1 9>&- &
+    saver_pid=$!
+fi
+/usr/local/bin/dwmblocks >>"$state_dir/dwmblocks.log" 2>&1 9>&- &
+status_pid=$!
+export DWM_BLOCKS_PID="$status_pid"
+/usr/local/bin/dwm >>"$state_dir/dwm.log" 2>&1 9>&- &
+wm_pid=$!
+printf '%s\n' "$wm_pid" >"$runtime/dwm.pid"
+# Use the Ubuntu native package and X11 plugin, bypassing Snap/AppImage wrappers.
+# NameHasOwner only queries D-Bus; it never activates another application.
+if [ -x /usr/bin/flameshot ] && ! timeout 2 dbus-send --session --type=method_call --print-reply \
+        --dest=org.freedesktop.DBus /org/freedesktop/DBus \
+        org.freedesktop.DBus.NameHasOwner string:org.flameshot.Flameshot 2>/dev/null | grep -q 'boolean true'; then
+    QT_QPA_PLATFORM=xcb /usr/bin/flameshot >>"$state_dir/flameshot.log" 2>&1 9>&- &
+    flameshot_pid=$!
+fi
+rc=0
+wait "$wm_pid" || rc=$?
+exit "$rc"

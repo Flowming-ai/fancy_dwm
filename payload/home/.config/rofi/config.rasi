@@ -1,0 +1,14 @@
+configuration {
+    modi: "drun,run,window";
+    show-icons: true;
+    icon-theme: "Papirus-Dark";
+    terminal: "st";
+    font: "JetBrainsMono Nerd Font Mono 14";
+    matching: "fuzzy";
+    drun-display-format: "{name}";
+    display-drun: "应用";
+    display-run: "命令";
+    display-window: "窗口";
+    sidebar-mode: true;
+}
+@theme "gruvbox-dark"

@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+shots="$HOME/Pictures/Screenshots"
+mkdir -p "$shots"
+file="$shots/$(date +%Y%m%d-%H%M%S)-$$.png"
+case "${1:-full}" in
+    select) maim -s "$file" || { rm -f "$file"; exit 0; } ;;
+    full) maim "$file" ;;
+    *) exit 2 ;;
+esac
+xclip -selection clipboard -t image/png -i "$file"
+notify-send 'Screenshot saved / 截图已保存' "$file"

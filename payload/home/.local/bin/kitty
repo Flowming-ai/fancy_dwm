@@ -1,0 +1,3 @@
+#!/bin/sh
+export GLFW_IM_MODULE=ibus
+exec /usr/bin/kitty "$@"

@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.o
+.DS_Store
+/dist/
+/build/
+/payload/src/dwm/dwm
+/payload/src/st/st
+/payload/src/dmenu/dmenu
+/payload/src/dmenu/stest
+/payload/src/dwmblocks/dwmblocks

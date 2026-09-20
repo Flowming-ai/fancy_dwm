@@ -1,0 +1,56 @@
+Luke / LARBS DWM — Ubuntu 适配
+Super = Windows / Command 键。中文输入：Ctrl+Space；激活拼音后 Shift 切换中英文。
+
+Super+Enter                     st 终端
+Alt+Shift+Enter / Ctrl+Alt+t     st 终端备用快捷键
+Super+Shift+Enter               呼出/隐藏临时浮动终端
+Super+Shift+d                   Kitty 终端
+Alt+d                           Rofi 应用启动器
+Super+d                         dmenu 命令启动器
+Super+w                         浏览器
+Super+r / Super+Shift+r         lf 文件管理器 / btop 资源监视
+Super+n / Super+m               nvim / 音量控制
+Super+F1 / F3 / F12             本说明 / 显示器 / 中文输入设置
+
+Super+j/k                       切换窗口
+Super+Shift+j/k                 调整窗口顺序
+Super+h/l                       调整主区域宽度
+Super+Space                     当前窗口提升为主窗口
+Super+Shift+Space               切换浮动
+Super+t / Shift+t               左右平铺 / 上下平铺
+Super+y / Shift+y               螺旋 / 递减布局
+Super+u / Shift+u               Deck / 单窗口布局
+Super+i / Shift+i               居中主窗口 / 居中浮动主窗口
+Super+f                         全屏
+Super+a / Shift+a               开关间隙 / 重置间隙
+Super+z/x                       增大/减小间隙
+Super+s                         窗口置于所有标签
+Super+1…9                       切换标签
+Super+Shift+1…9                 移动窗口到标签
+Super+Left/Right                切换显示器
+Super+Shift+Left/Right          移动窗口到显示器
+Super+鼠标左键/右键拖动         移动/缩放窗口
+Super+q                         关闭当前窗口
+Super+b                         显示/隐藏状态栏
+Super+Backspace                 会话菜单（注销前有确认）
+Super+Shift+Backspace           重载 DWM，保留打开的窗口
+
+Print / Shift+Print             全屏截图 / 框选截图（保存并复制）
+Flameshot                       原生版本随 DWM 启动，点击右侧托盘图标使用
+XScreenSaver                    随 DWM 启动；会话菜单可锁屏
+Super+- / Super+=               音量减 / 加
+Super+p                         播放/暂停
+Super+, / Super+.               上一首 / 下一首
+Super+'                         临时计算器
+
+右侧托盘固定在最右显示器；Super+b 隐藏/恢复该显示器的状态栏和托盘。
+状态栏可点击：负载/内存→btop；音量→pulsemixer；网络→nmtui；
+输入法→Fcitx5设置；时间→日历；?→本说明。
+st 复制/粘贴：Ctrl+Shift+c/v；Alt+j/k 滚动；Ctrl+Shift+PageUp/Down 缩放。
+Kitty 保留 .85 背景透明；st 为 .90。字体为 JetBrainsMono Nerd Font。
+Zsh / Starship / 插件：~/.config/dwm-shell/zshrc；个人覆盖：~/.zshrc.local。
+拼音为本地整句输入、7 候选和词频学习；新安装默认关闭云拼音。
+
+配置源码：~/.local/src/larbs-ubuntu/{dwm,st,dmenu,dwmblocks}
+安装日志/备份：~/.local/state/larbs-ubuntu/
+退出本说明：q

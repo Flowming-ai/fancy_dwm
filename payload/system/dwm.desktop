@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=DWM
+Comment=Luke Smith DWM for Ubuntu, st, Rofi and Fcitx5
+Exec=/usr/local/bin/dwm-session
+TryExec=/usr/local/bin/dwm
+Type=Application
+DesktopNames=dwm;

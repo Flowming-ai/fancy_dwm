@@ -1,0 +1,87 @@
+#!/bin/sh
+# Local status only: no web requests. dwmblocks adds its own click markers.
+
+launch() {
+    command -v "$1" >/dev/null 2>&1 || return 0
+    setsid -f "$@" </dev/null >/dev/null 2>&1
+}
+
+module=${1:-help}
+if [ -n "${BLOCK_BUTTON:-}" ]; then
+    case "$BLOCK_BUTTON:$module" in
+        1:cpu|1:memory) launch st -e btop ;;
+        1:volume) launch st -e pulsemixer ;;
+        2:volume) pamixer --toggle-mute >/dev/null 2>&1 ;;
+        4:volume) pamixer --increase 5 >/dev/null 2>&1 ;;
+        5:volume) pamixer --decrease 5 >/dev/null 2>&1 ;;
+        1:network) launch st -e nmtui ;;
+        1:input) launch fcitx5-config-qt ;;
+        1:clock)
+            launch st -e sh -c 'if command -v cal >/dev/null 2>&1; then cal -3; else date; fi; printf "\nPress Enter to close..."; IFS= read -r answer'
+            ;;
+        1:help) launch luke-help ;;
+    esac
+    exit 0
+fi
+
+case "$module" in
+    cpu)
+        awk '{printf "LOAD %.2f\n", $1}' /proc/loadavg 2>/dev/null || printf 'LOAD --\n'
+        ;;
+    memory)
+        awk '
+            /^MemTotal:/ { total=$2 }
+            /^MemAvailable:/ { available=$2; have_available=1 }
+            /^MemFree:|^Buffers:|^Cached:/ { fallback+=$2 }
+            END {
+                if (total>0) {
+                    if (!have_available) available=fallback
+                    printf "MEM %.0f%%\n", 100*(total-available)/total
+                } else print "MEM --"
+            }
+        ' /proc/meminfo 2>/dev/null
+        ;;
+    volume)
+        muted=$(timeout 2 pamixer --get-mute 2>/dev/null) || muted=''
+        if [ "$muted" = true ]; then
+            printf 'VOL muted\n'
+        else
+            volume=$(timeout 2 pamixer --get-volume 2>/dev/null) || volume=''
+            case "$volume" in
+                ''|*[!0-9]*) printf 'VOL --\n' ;;
+                *) printf 'VOL %s%%\n' "$volume" ;;
+            esac
+        fi
+        ;;
+    network)
+        state=$(LC_ALL=C timeout 2 nmcli -t -f STATE general 2>/dev/null) || state=''
+        case "$state" in
+            connected) printf 'NET online\n' ;;
+            'connected (local only)') printf 'NET local\n' ;;
+            'connected (site only)') printf 'NET site\n' ;;
+            connecting*) printf 'NET wait\n' ;;
+            disconnected|disconnecting|asleep) printf 'NET off\n' ;;
+            *)
+                iface=$(awk 'NR>1 && $2=="00000000" {print $1; exit}' /proc/net/route 2>/dev/null)
+                iface=$(printf '%s' "$iface" | LC_ALL=C tr -cd 'A-Za-z0-9_.:-' | cut -c 1-12)
+                printf 'NET %s\n' "${iface:---}"
+                ;;
+        esac
+        ;;
+    input)
+        method=$(timeout 2 fcitx5-remote --check -n 2>/dev/null) || method=''
+        case "$method" in
+            keyboard-*) printf 'IM EN\n' ;;
+            *pinyin*) printf 'IM Pinyin\n' ;;
+            *rime*) printf 'IM Rime\n' ;;
+            '') printf 'IM --\n' ;;
+            *)
+                method=$(printf '%s' "$method" | LC_ALL=C tr -cd 'A-Za-z0-9_.-' | cut -c 1-12)
+                printf 'IM %s\n' "${method:-on}"
+                ;;
+        esac
+        ;;
+    clock) date '+%m-%d %H:%M' ;;
+    help) printf '? Help\n' ;;
+    *) printf 'STATUS --\n' ;;
+esac

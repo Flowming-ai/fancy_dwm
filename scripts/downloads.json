@@ -1,0 +1,43 @@
+{
+  "font": {
+    "version": "v3.4.0",
+    "url": "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/JetBrainsMono.tar.xz",
+    "sha256": "ef552a3e638f25125c6ad4c51176a6adcdce295ab1d2ffacf0db060caf8c1582"
+  },
+  "git": {
+    "ohmyzsh": {
+      "url": "https://github.com/ohmyzsh/ohmyzsh.git",
+      "commit": "6421f8e104e4e87f2373362cbf61e46a918612a7"
+    },
+    "zsh-autosuggestions": {
+      "url": "https://github.com/zsh-users/zsh-autosuggestions.git",
+      "commit": "85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5"
+    },
+    "zsh-syntax-highlighting": {
+      "url": "https://github.com/zsh-users/zsh-syntax-highlighting.git",
+      "commit": "0bfcb582e71d3abe604ce67bc0fe5a21f377507e"
+    }
+  },
+  "starship": {
+    "version": "v1.26.0",
+    "amd64": {
+      "url": "https://github.com/starship/starship/releases/download/v1.26.0/starship-x86_64-unknown-linux-musl.tar.gz",
+      "sha256": "b7c232b0e8249d8e55a40beb79c5c43a7d370f3f9408bd215deb0170daeaadf3"
+    },
+    "arm64": {
+      "url": "https://github.com/starship/starship/releases/download/v1.26.0/starship-aarch64-unknown-linux-musl.tar.gz",
+      "sha256": "dc30189378d2f2e287384e8a692d3f95ad1df64cf0e8c36aa9201516028aed6b"
+    }
+  },
+  "fastfetch": {
+    "version": "2.68.1",
+    "amd64": {
+      "url": "https://github.com/fastfetch-cli/fastfetch/releases/download/2.68.1/fastfetch-linux-amd64-polyfilled.tar.gz",
+      "sha256": "3eeaec3570dcfa53b4f3054cf1f735de62186fdfaf105aa69635e0805937ba85"
+    },
+    "arm64": {
+      "url": "https://github.com/fastfetch-cli/fastfetch/releases/download/2.68.1/fastfetch-linux-aarch64-polyfilled.tar.gz",
+      "sha256": "8845d0485fda958b7a35639efad8bebcf9bc3a237fcf304c35b6ff60bb1b331f"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+Ubuntu adaptation of Luke Smith desktop. Source snapshots:
+dwm: https://github.com/LukeSmithxyz/dwm/tree/ee3354d54a51a14449a9ba93fe978c8a3a66db45
+st: https://github.com/LukeSmithxyz/st/tree/48b8ee6e181643800fe83353ec554f503020a8fa
+dmenu: https://github.com/LukeSmithxyz/dmenu/tree/c1819f18c07df6984bbfd2ca7207295eec85806f
+dwmblocks: https://github.com/LukeSmithxyz/dwmblocks/tree/1c9744ac7ded4fff8171169bc0b9736f3acd4cfe
+voidrice: https://github.com/LukeSmithxyz/voidrice/tree/b45fc5680674bba65e87123a3d95985766c86915
+LARBS: https://github.com/LukeSmithxyz/LARBS/tree/76b5b81a8cc44939a6838f45f6d5edeb07ec5031
+Wallpaper: voidrice/.local/share/thiemeyer_road_to_samarkand.jpg (Thomas Thiemeyer, Road to Samarkand); source asset preserved.
+DWM system tray update (2026-09-21):
+Official patch: https://dwm.suckless.org/patches/systray/
+The patch is adapted to the pinned Luke DWM source: rightmost-monitor placement and XEmbed icon restoration across DWM restart.

@@ -1,0 +1,30 @@
+[global]
+    monitor = 0
+    follow = keyboard
+    width = 420
+    origin = top-right
+    offset = (18, 48)
+    padding = 16
+    horizontal_padding = 16
+    frame_width = 2
+    font = Noto Sans CJK SC 12
+    format = "<b>%s</b>\n%b"
+    corner_radius = 8
+    mouse_left_click = close_current
+    mouse_middle_click = do_action
+    mouse_right_click = close_all
+[urgency_low]
+    background = "#282828"
+    foreground = "#ebdbb2"
+    frame_color = "#504945"
+    timeout = 5
+[urgency_normal]
+    background = "#282828"
+    foreground = "#ebdbb2"
+    frame_color = "#d79921"
+    timeout = 8
+[urgency_critical]
+    background = "#282828"
+    foreground = "#fbf1c7"
+    frame_color = "#cc241d"
+    timeout = 0

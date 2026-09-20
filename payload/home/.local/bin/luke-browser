@@ -1,0 +1,5 @@
+#!/bin/sh
+for browser in google-chrome-stable google-chrome firefox chromium; do
+    if command -v "$browser" >/dev/null 2>&1; then exec "$browser" "$@"; fi
+done
+exec xdg-open https://duckduckgo.com

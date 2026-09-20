@@ -1,0 +1,14 @@
+set shell sh
+set hidden true
+set icons true
+set preview false
+set scrolloff 5
+cmd open ${{
+    if [ -d "$f" ]; then
+        exit 0
+    elif file --mime-type -b "$f" | grep -q '^text/'; then
+        nvim "$f"
+    else
+        xdg-open "$f" >/dev/null 2>&1 &
+    fi
+}}
