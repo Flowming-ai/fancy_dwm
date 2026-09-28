@@ -1,10 +1,10 @@
-# Fancy DWM：Ubuntu 一键配置
+# Fancy DWM: Ubuntu Desktop Setup
 
-把当前的 Luke Smith 风格 DWM、终端、中文输入法和系统托盘部署到另一台 Ubuntu 桌面电脑。所有用户名、家目录和硬件状态在目标机器上读取；不携带原电脑的密码、浏览器资料、SSH 密钥、终端历史或输入法个人词库。
+Deploy a Luke Smith-style DWM desktop, terminal environment, Chinese input method, and system tray on another Ubuntu computer. The installer reads the destination machine's username, home directory, and hardware configuration. It does not copy passwords, browser profiles, SSH keys, shell history, or personal input-method dictionaries.
 
-## 新电脑安装
+## Install on a new computer
 
-从你的 GitHub 仓库克隆，部署本次完整配置（含 FortiClient 与真正休眠）：
+Clone the repository and install the complete setup, including FortiClient and disk hibernation:
 
 ```sh
 git clone https://github.com/Flowming-ai/fancy_dwm.git
@@ -12,12 +12,11 @@ cd fancy_dwm
 sh install.sh --full
 ```
 
-`--full` 会先检查硬件和启动条件。休眠自动配置目前要求未加密的普通 ext4 根分区、GRUB、关闭 Secure Boot/lockdown，并支持 ACPI platform 休眠；不支持的机器会明确停止，不猜测磁盘偏移。FortiClient 的固定安装包仅有 amd64。只安装通用桌面、150% 缩放和 Teams 启动器时，运行 `sh install.sh`，不带 `--full`。
+`--full` checks hardware and boot requirements first. Automatic hibernation setup currently requires an unencrypted ext4 root filesystem on a plain disk or partition, GRUB, disabled Secure Boot and kernel lockdown, and support for ACPI platform hibernation. Unsupported configurations stop with an explanation rather than using guessed disk offsets. The pinned FortiClient package is available for amd64 only. To install just the desktop, 150% scaling, and Teams launcher, run `sh install.sh` without `--full`.
 
+The installer targets **Ubuntu Desktop 24.04 and 26.04, on amd64 or arm64**. It requires an existing graphical login manager, internet access, and a regular user with sudo privileges. Other Ubuntu releases are rejected. Compatibility with every hardware configuration or graphics driver is not guaranteed. Downloads come from Ubuntu package repositories, official GitHub releases, and Fortinet's official download server for the optional VPN client.
 
-目标是 **Ubuntu Desktop 24.04 / 26.04，amd64 或 arm64**，需要可用的图形登录管理器、网络和 sudo 权限。其他 Ubuntu 版本会停止并提示，不保证所有版本或显卡驱动都兼容。安装源包括 Ubuntu 软件源和 GitHub 官方发布地址。
-
-将整个安装包复制到新电脑，在普通用户的终端执行：
+Alternatively, copy the portable archive to the new computer and run:
 
 ```sh
 tar -xzf ubuntu-dwm-setup.tar.gz
@@ -25,111 +24,111 @@ cd ubuntu-dwm-setup
 sh install.sh
 ```
 
-不要在 `sh` 前加 `sudo`。脚本需要提权时会提示输入目标电脑的 sudo 密码。首次下载字体、插件及安装依赖需要联网；这是可携带的在线安装包，不是离线 Ubuntu 镜像。
+Run these commands as your regular desktop user. **Do not put `sudo` before `sh`.** The installer requests the destination computer's sudo password when needed. Initial font, plugin, and package downloads require internet access; the archive is a portable online installer, not an offline Ubuntu image.
 
-完成后保存工作，注销并重新登录。脚本会为当前用户设置默认 DWM 会话；若登录管理器仍显示旧选择，在齿轮菜单中选择一次 **DWM**。不会自动注销或重启。GNOME 仍可在登录界面选择。
+After installation, save your work, log out, and sign in again. The installer sets DWM as the current user's default session. If the login manager still shows the previous selection, choose **DWM** once from its session menu. The installer does not log you out or reboot automatically. GNOME remains available from the login screen.
 
-只检查安装包及系统条件（不安装、不下载、不休眠）：
+Check the archive and host requirements without installing, downloading, or hibernating:
 
 ```sh
 sh install.sh --check
-# 同时检查可选 VPN 与休眠模块的本机条件
+# Also check local requirements for the optional VPN and hibernation modules.
 sh install.sh --check --full
 ```
 
-保留原有默认登录桌面：
+Keep your current default login session:
 
 ```sh
 sh install.sh --skip-default-session
 ```
 
-按需选择功能：
+Choose individual options:
 
 ```sh
-sh install.sh --scale 125                 # 支持 100/125/150/175/200，默认 150
-sh install.sh --with-forticlient          # 桌面 + VPN 客户端
-sh install.sh --with-hibernation          # 桌面 + 真正休眠
+sh install.sh --scale 125                 # 100/125/150/175/200; default: 150
+sh install.sh --with-forticlient          # Desktop + VPN client
+sh install.sh --with-hibernation          # Desktop + disk hibernation
 ```
 
-## 包含内容
+## Included components
 
-| 功能 | 安装与配置 |
+| Component | Installation and configuration |
 | --- | --- |
-| 桌面 | 固定版本的 Luke DWM、st、dmenu、dwmblocks 源码，现场编译 |
-| 系统托盘 | 适配后的 XEmbed 托盘，固定最右侧显示器，保留状态栏点击与重载 |
-| 终端 | st；Kitty 使用 JetBrainsMono Nerd Font，背景透明度 0.85 |
-| Shell | Zsh 默认 Shell、Oh My Zsh、命令建议、语法高亮、Starship 彩色提示符 |
-| 命令行 | fastfetch、eza、bat、btop；`ls` 使用 eza，`cat` 使用 bat |
-| 启动器与通知 | Rofi、dmenu、Dunst、Papirus 图标 |
-| 中文 | Fcitx5 拼音、GTK/Qt 前端、中文字体、候选预测；Ctrl+Space 切换 |
-| 桌面效果 | Picom 透明、阴影与淡入淡出；保留当前壁纸 |
-| 截图 | Flameshot 托盘；Print/Shift+Print 保留当前 maim 截图快捷键 |
-| 屏保与锁屏 | XScreenSaver 在 DWM 会话启动，锁屏入口保留在会话菜单 |
-| 日常工具 | lf、Neovim、音量、亮度、网络与显示器工具 |
-| 显示缩放 | 默认 150%：Xft/GTK/Qt/Rofi、鼠标指针与 XSettings；目标机器安装 xsettingsd |
-| Teams | Microsoft Teams 官方网页启动器；优先 Chrome/Edge/Chromium 独立窗口，其他浏览器回退网页 |
-| 真正休眠（可选） | 动态计算 swap 容量、UUID 与偏移，识别 Dracut/initramfs-tools；platform/S4 与最小内存快照修正 |
-| FortiClient（可选） | 官方 VPN-only 安装包，SHA-256 检查，APT 自动补齐 libnss3-tools 等依赖，启用后台服务 |
+| Desktop | Pinned Luke DWM, st, dmenu, and dwmblocks sources, compiled on the destination machine |
+| System tray | Adapted XEmbed tray on the rightmost monitor, preserving clickable status text and DWM restarts |
+| Terminals | st; Kitty with JetBrainsMono Nerd Font and 0.85 background opacity |
+| Shell | Zsh as the default shell, Oh My Zsh, autosuggestions, syntax highlighting, and a colorful Starship prompt |
+| Command-line tools | fastfetch, eza, bat, and btop; `ls` uses eza and `cat` uses bat |
+| Launchers and notifications | Rofi, dmenu, Dunst, and Papirus icons |
+| Chinese input | Fcitx5 Pinyin, GTK/Qt frontends, Chinese fonts, and candidate prediction; toggle with Ctrl+Space |
+| Desktop effects | Picom transparency, shadows, and fading; the bundled wallpaper is preserved |
+| Screenshots | Flameshot tray icon; existing maim shortcuts on Print and Shift+Print |
+| Screensaver and locking | XScreenSaver starts with the DWM session; locking is available from the session menu |
+| Everyday tools | lf, Neovim, and utilities for audio, brightness, networking, and displays |
+| Display scaling | 150% by default for Xft/GTK/Qt/Rofi, cursor sizing, and XSettings; xsettingsd is installed on the destination machine |
+| Teams | Launcher for Microsoft's official Teams website; prefers a standalone Chrome/Edge/Chromium app window and falls back to a browser page |
+| Disk hibernation (optional) | Calculates swap size, UUID, and resume offset on the destination machine; detects Dracut/initramfs-tools; uses platform/S4 and the minimal-memory snapshot fix |
+| FortiClient (optional) | Official VPN-only package, SHA-256 verification, automatic dependency resolution through APT including libnss3-tools, and an enabled background service |
 
-当前状态栏使用 **dwmblocks**，不同时启动早期方案中的 slstatus。输入法为开源 Fcitx5 拼音，未打包搜狗闭源安装器。已有个人词库保持原样。
+The status bar uses **dwmblocks**. The earlier slstatus setup is not started alongside it. Chinese input uses open-source Fcitx5 Pinyin; the proprietary Sogou installer is not included. Existing personal dictionaries are preserved.
 
-## 常用快捷键
+## Keyboard shortcuts
 
-**Super 就是 Win 键。**
+**Super is the Windows key.**
 
-| 快捷键 | 功能 |
+| Shortcut | Action |
 | --- | --- |
-| **Win+空格** | 将当前平铺窗口提升为主窗口 |
-| Win+Shift+空格 | 切换当前窗口的浮动状态 |
-| Win+t | 切换左右平铺布局 |
-| Win+j / k | 切换焦点窗口 |
-| Win+h / l | 缩小 / 放大主区域 |
-| Win+Enter | st 终端 |
-| Alt+Shift+Enter / Ctrl+Alt+t | 备用终端快捷键 |
-| Win+Shift+d | Kitty 终端 |
-| Alt+d | Rofi 应用启动器 |
-| Ctrl+Space | 中英文输入切换 |
-| Ctrl+Shift+c / v | 终端复制 / 粘贴 |
-| Win+Shift+Backspace | 重载 DWM，保留打开的窗口 |
-| Win+Backspace | 会话菜单，含锁屏、真正休眠与注销 |
-| Win+F1 | 完整快捷键说明 |
+| **Win+Space** | Promote the focused tiled window to the master area |
+| Win+Shift+Space | Toggle floating mode for the focused window |
+| Win+t | Switch to the side-by-side tiling layout |
+| Win+j / k | Focus the next / previous window |
+| Win+h / l | Shrink / expand the master area |
+| Win+Enter | Open st |
+| Alt+Shift+Enter / Ctrl+Alt+t | Alternative terminal shortcuts |
+| Win+Shift+d | Open Kitty |
+| Alt+d | Open the Rofi application launcher |
+| Ctrl+Space | Toggle Chinese / English input |
+| Ctrl+Shift+c / v | Copy / paste in the terminal |
+| Win+Shift+Backspace | Restart DWM while keeping open windows |
+| Win+Backspace | Open the session menu: lock, disk hibernation, and logout |
+| Win+F1 | Show the full shortcut reference |
 
-浮动窗口需要先按 Win+Shift+空格，再按 Win+空格才能提升到平铺主区域。若当前布局没有主区域，可先按 Win+t。
+For a floating window, press Win+Shift+Space first, then Win+Space to promote it to the tiled master area. If the current layout has no master area, press Win+t first.
 
-## 休眠与 VPN 的使用边界
+## Hibernation and VPN requirements
 
-休眠模块不复制这台电脑的 UUID、swap 偏移、固定 36 GiB 容量或用户名。新机器根据 RAM 分配专用 swap，保留已有 swap，并在改动前备份启动配置和 initramfs；失败时恢复配置，保留已创建的 swap，避免 `swapoff` 引发内存不足。普通重启一次后用 `~/.local/bin/dwm-hibernate --check` 检查，再通过 Win+Backspace 的菜单确认休眠。未配置的机器会显示原因，不会把“睡眠”冒充“真正休眠”。
+The hibernation module does not copy the original computer's UUID, swap offset, fixed 36 GiB swap size, or username. It allocates a dedicated swap file based on the destination machine's RAM, keeps existing swap active, and backs up boot configuration and initramfs files before making changes. On failure, it restores configuration and retains any newly created swap file to avoid memory exhaustion from `swapoff`. Reboot normally once after setup, run `~/.local/bin/dwm-hibernate --check`, and then confirm hibernation through the Win+Backspace menu. On an unconfigured machine, the helper explains what is missing; it does not substitute suspend-to-RAM for disk hibernation.
 
-本次保留的最新策略是 **ACPI S4/platform + image_size=0**。键鼠唤醒还依赖固件、端口和 USB 待机供电；脚本不承诺所有主板都能实现，也不批量打开未知设备的唤醒权限。NVIDIA 驱动的休眠服务、显存保存与临时存储仍需目标机器的驱动配置配合。详见 [休眠模块](scripts/hibernate/README.md)。
+The current policy is **ACPI S4/platform with image_size=0**. Keyboard and mouse wake support depends on firmware, USB ports, and standby power. The installer does not guarantee this behavior on every motherboard or enable wakeup indiscriminately for unknown devices. NVIDIA hibernation services, video-memory preservation, and temporary storage also depend on the destination machine's driver configuration. See the [hibernation module documentation](scripts/hibernate/README.md).
 
-FortiClient 固定为本机已使用的 VPN-only 7.4.3.5411，保持已有健康安装版本，避免自动升级/降级和升级脚本中断现有 VPN。固定版本用于重现本机配置，并非“永远最新”的承诺；后续更新需重新验证下载与哈希。新机器安装后自行填写学校/公司的 VPN 网关并完成 SAML 登录；不会携带 VPN 数据库、密码或证书。26.04/DWM 的本机使用记录不等于厂商兼容认证，厂商该版支持列表见 [Fortinet 7.4.3 文档](https://docs.fortinet.com/document/forticlient/7.4.3/linux-release-notes/136392/product-integration-and-support)。
+FortiClient is pinned to the VPN-only **7.4.3.5411** release used on the original machine. Any healthy existing installation is preserved, avoiding automatic upgrades, downgrades, or package scripts that could interrupt an active VPN. The pinned release reproduces this setup; it is not a promise to always install the latest version. Future updates require checking the download and its hash again. After installation, enter your organization's VPN gateway and complete SAML login yourself. VPN databases, passwords, and certificates are not copied. Local use on Ubuntu 26.04/DWM is not vendor certification; see the [Fortinet 7.4.3 support documentation](https://docs.fortinet.com/document/forticlient/7.4.3/linux-release-notes/136392/product-integration-and-support).
 
-Teams 入口使用目标电脑现有浏览器，不复制浏览器账户或强制安装 Chrome。Grammarly/LanguageTool 没有完成部署，因此不在安装内容中；Smart Academic Reader 是另一个项目，也未混入此桌面仓库。
+The Teams launcher uses an existing browser on the destination computer. It does not copy browser accounts or require Chrome to be installed. Grammarly and LanguageTool were not deployed and are not included. Smart Academic Reader is a separate project and is also outside this desktop repository.
 
-## 配置位置与备份
+## Configuration and backups
 
-- 源码：`~/.local/src/larbs-ubuntu/`。
-- Shell 美化：`~/.config/dwm-shell/zshrc`；个人扩展可写 `~/.zshrc.local`。
-- 输入法：`~/.config/fcitx5/`。
-- Kitty / Picom / Rofi：`~/.config/` 下的对应目录。
-- 本次安装的备份与日志：`~/.local/state/ubuntu-dwm-setup/时间戳/`，安装结束时会输出确切位置。
-- 缩放：`~/.Xresources`、`~/.config/xsettingsd/`、`~/.config/dwm-scale/`。
-- Teams：`~/.local/bin/teams-web`。
-- 休眠系统备份与独立回滚：`/var/backups/dwm-hibernate/portable-时间戳/`。
-- DWM 会话日志：`~/.local/state/dwm/`。
+- Editable sources: `~/.local/src/larbs-ubuntu/`.
+- Shell configuration: `~/.config/dwm-shell/zshrc`; put personal additions in `~/.zshrc.local`.
+- Input method: `~/.config/fcitx5/`.
+- Kitty, Picom, and Rofi: their respective directories under `~/.config/`.
+- Installation backups and logs: `~/.local/state/ubuntu-dwm-setup/TIMESTAMP/`; the installer prints the exact path.
+- Scaling: `~/.Xresources`, `~/.config/xsettingsd/`, and `~/.config/dwm-scale/`.
+- Teams: `~/.local/bin/teams-web`.
+- Hibernation system backups and independent rollback: `/var/backups/dwm-hibernate/portable-TIMESTAMP/`.
+- DWM session logs: `~/.local/state/dwm/`.
 
-重复安装会备份并重新应用仓库中管理的桌面配置；请先把希望保留的定制改入仓库。已有 `.zshrc` 与 `.profile` 通过受管理区块接入配置，保留其他内容。桌面回滚不会卸载 apt 软件包，也不撤销可选休眠的启动设置。休眠有独立 root 备份和回滚脚本，见模块说明。FortiClient 包和后台服务保留；安装前的包/服务状态记录在该次备份的 `extras/forticlient-before.json`，不包含 VPN 资料。
+Reinstalling backs up and reapplies the desktop settings managed by this repository. Add any customizations you want to keep to the repository first. Existing `.zshrc` and `.profile` files are connected through managed blocks, preserving other content. Desktop rollback does not uninstall APT packages or undo the optional hibernation boot configuration. Hibernation has separate root-owned backups and a rollback script, described in its module documentation. The FortiClient package and background service remain installed; their previous status is recorded in `extras/forticlient-before.json` inside the installation backup, without VPN account data.
 
 ```sh
-# 先查看将恢复的文件。
-sh scripts/rollback.sh "$HOME/.local/state/ubuntu-dwm-setup/实际备份目录"
-# 确认预览后，执行恢复。
-sh scripts/rollback.sh "$HOME/.local/state/ubuntu-dwm-setup/实际备份目录" --apply
+# Preview the files to be restored; replace YOUR_BACKUP_DIRECTORY with the actual directory.
+sh scripts/rollback.sh "$HOME/.local/state/ubuntu-dwm-setup/YOUR_BACKUP_DIRECTORY"
+# After reviewing the preview, apply the rollback.
+sh scripts/rollback.sh "$HOME/.local/state/ubuntu-dwm-setup/YOUR_BACKUP_DIRECTORY" --apply
 ```
 
-## 继续用 Git 管理
+## Maintain the setup with Git
 
-本机交付包含独立的 Git 仓库；另附 `.bundle` 可完整携带提交历史。新电脑可以直接解压安装，也可以从 bundle 克隆：
+The local distribution includes a Git repository and a `.bundle` containing its complete commit history. You can install from the extracted archive or clone the bundle:
 
 ```sh
 git clone ubuntu-dwm-setup.bundle ubuntu-dwm-setup
@@ -137,7 +136,7 @@ cd ubuntu-dwm-setup
 sh install.sh
 ```
 
-修改配置后，检查内容并更新快照校验清单，然后提交：
+After editing the configuration, review your changes, update the checksum manifest, and commit:
 
 ```sh
 python3 scripts/update-checksums.py
@@ -146,21 +145,21 @@ git add .
 git commit -m "Update my desktop configuration"
 ```
 
-不要将密码、密钥和个人浏览器目录加入仓库。远端为 `https://github.com/Flowming-ai/fancy_dwm.git`。安装器包含 GitHub CLI；需要从新电脑推送时先运行 `gh auth login --hostname github.com --git-protocol https --web`，自行在 GitHub 页面完成设备码授权。认证信息由 GitHub CLI 在该电脑本地管理，不加入此仓库。提交后可运行 `git push origin main`。
+Keep passwords, keys, and personal browser directories out of the repository. The remote is `https://github.com/Flowming-ai/fancy_dwm.git`. The installer includes GitHub CLI. To push from a new computer, run `gh auth login --hostname github.com --git-protocol https --web` and complete device authorization on GitHub. GitHub CLI manages authentication locally on that computer; credentials are not included in this repository. After committing, run `git push origin main`.
 
-更新可拷贝安装包（要求工作区已提交且完整性检查通过）：
+Rebuild the portable distribution after committing all changes and passing the integrity check:
 
 ```sh
 sh scripts/package.sh ../outputs
 ```
 
-这会重新生成 `ubuntu-dwm-setup.tar.gz`、`ubuntu-dwm-setup.bundle` 和各自的 SHA-256 文件。GitHub 仓库只保存配置和源码，不提交下载缓存、专有 VPN 二进制或本机备份。
+This generates `ubuntu-dwm-setup.tar.gz`, `ubuntu-dwm-setup.bundle`, and their SHA-256 files. The GitHub repository contains configuration and source code, not download caches, proprietary VPN binaries, or local machine backups.
 
-## 验证与来源
+## Validation and sources
 
-见 [验证记录](VALIDATION.md)、[来源与许可证](NOTICE.md) 和 [固定下载版本](scripts/downloads.json)。源码自带上游许可证。固定下载文件会验证 SHA-256，插件使用固定 Git 提交；Ubuntu 软件包仍随软件源更新。
+See the [validation record](VALIDATION.md), [sources and licenses](NOTICE.md), and [pinned downloads](scripts/downloads.json). Upstream source licenses are preserved. Pinned downloads are checked with SHA-256, plugins use fixed Git commits, and Ubuntu packages receive updates from the configured repositories.
 
-开发时可在临时目录中编译，完全不安装：
+For development, build in a temporary directory and run the tests without installing anything:
 
 ```sh
 sh scripts/build-check.sh
