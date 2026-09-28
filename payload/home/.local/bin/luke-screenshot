@@ -9,4 +9,4 @@ case "${1:-full}" in
     *) exit 2 ;;
 esac
 xclip -selection clipboard -t image/png -i "$file"
-notify-send 'Screenshot saved / 截图已保存' "$file"
+notify-send 'Screenshot saved' "$file"

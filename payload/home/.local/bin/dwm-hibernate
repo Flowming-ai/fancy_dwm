@@ -12,8 +12,8 @@ import subprocess
 import sys
 import uuid
 
-CONFIRM = 'Hibernate now / 立即休眠'
-CANCEL = 'Cancel / 取消'
+CONFIRM = 'Hibernate now'
+CANCEL = 'Cancel'
 
 
 @dataclass(frozen=True)
@@ -78,7 +78,7 @@ def validate_grub_defaults(text):
         words = shlex.split(match[2], comments=True)
         allowed = (['0'],) if match[1] == 'GRUB_DEFAULT' else ([], [''], ['false'], ['0'], ['no'])
         if words not in allowed:
-            raise ValueError('需要默认 GRUB_DEFAULT=0 且不能启用保存启动项；请先检查 ' + match[1])
+            raise ValueError('GRUB_DEFAULT must be 0 and saved boot entries must be disabled; check ' + match[1])
 
 
 def parse_swaps(text):
@@ -100,10 +100,10 @@ def can_hibernate(runner=subprocess.run):
                      '/org/freedesktop/login1', 'org.freedesktop.login1.Manager', 'CanHibernate'],
                     capture_output=True, text=True, timeout=10, check=False)
     if result.returncode:
-        raise RuntimeError('无法查询 logind CanHibernate：' + result.stderr.strip())
+        raise RuntimeError('Cannot query logind CanHibernate: ' + result.stderr.strip())
     fields = shlex.split(result.stdout.strip())
     if len(fields) != 2 or fields[0] != 's':
-        raise RuntimeError('logind CanHibernate 返回了未知格式')
+        raise RuntimeError('logind CanHibernate returned an unexpected response format')
     return fields[1]
 
 
@@ -112,7 +112,7 @@ def check_ready(paths=Paths(), runner=subprocess.run, *, stat_path=os.stat, lsta
     try:
         config = load_config(paths.config)
     except (OSError, ValueError, TypeError, AttributeError) as exc:
-        report.problems.append('无法读取有效的休眠配置：' + str(exc))
+        report.problems.append('Cannot read a valid hibernation configuration: ' + str(exc))
         return report
     report.facts.update(config)
     try:
@@ -126,85 +126,85 @@ def check_ready(paths=Paths(), runner=subprocess.run, *, stat_path=os.stat, lsta
             boot_link = Path('/vmlinuz')
         boot_image = boot_link.resolve(strict=True).name
         if not running_kernel or not boot_image.startswith('vmlinuz-'):
-            raise ValueError('无法识别当前或下次启动的内核版本')
+            raise ValueError('Cannot identify the running kernel or the kernel for the next boot')
         boot_kernel = boot_image.removeprefix('vmlinuz-')
         report.facts['running_kernel'] = running_kernel
         report.facts['next_boot_kernel'] = boot_kernel
         if running_kernel != boot_kernel:
-            report.problems.append('已安装新内核：当前 ' + running_kernel + '，下次启动 ' + boot_kernel
-                                   + '。请先正常重启，使休眠和恢复使用同一个内核。')
+            report.problems.append('A different kernel is installed: running ' + running_kernel + ', next boot ' + boot_kernel
+                                   + '. Reboot normally first so hibernation and resume use the same kernel.')
             report.reboot_required = True
     except (OSError, ValueError, RuntimeError) as exc:
-        report.problems.append('无法核对休眠前后的内核：' + str(exc))
+        report.problems.append('Cannot verify that hibernation and resume will use the same kernel: ' + str(exc))
     try:
         command_line = paths.cmdline.read_text()
         if 'noresume' in shlex.split(command_line):
-            report.problems.append('当前启动参数包含 noresume，恢复功能已禁用。')
+            report.problems.append('The current kernel command line contains noresume; resume is disabled.')
             report.reboot_required = True
         wanted_resume = 'UUID=' + config['root_uuid']
         wanted_offset = str(config['resume_offset'])
         if kernel_arguments(command_line, 'resume') != [wanted_resume]:
-            report.problems.append('当前内核启动参数尚未使用配置中的 resume=UUID。')
+            report.problems.append('The current kernel command line does not match the configured resume=UUID.')
             report.reboot_required = True
         if kernel_arguments(command_line, 'resume_offset') != [wanted_offset]:
-            report.problems.append('当前内核启动参数尚未使用配置中的 resume_offset。')
+            report.problems.append('The current kernel command line does not match the configured resume_offset.')
             report.reboot_required = True
     except (OSError, ValueError) as exc:
-        report.problems.append('无法检查内核启动参数：' + str(exc))
+        report.problems.append('Cannot check the kernel command line: ' + str(exc))
     try:
         root_device = stat_path(paths.root).st_dev
         expected_device = f'{os.major(root_device)}:{os.minor(root_device)}'
         report.facts['expected_resume_device'] = expected_device
         report.facts['active_resume_device'] = paths.resume.read_text().strip()
         if report.facts['active_resume_device'] != expected_device:
-            report.problems.append('当前内核的恢复设备尚未指向根文件系统所在设备。')
+            report.problems.append('The kernel resume device does not point to the root filesystem device.')
             report.reboot_required = True
         active_offset = natural_number(paths.resume_offset.read_text().strip(), 'sysfs resume_offset')
         report.facts['active_resume_offset'] = active_offset
         if active_offset != config['resume_offset']:
-            report.problems.append('当前内核的恢复偏移与专用 swap 文件不一致。')
+            report.problems.append('The kernel resume offset does not match the dedicated swap file.')
             report.reboot_required = True
     except (OSError, ValueError) as exc:
-        report.problems.append('无法检查内核恢复设备和偏移：' + str(exc))
+        report.problems.append('Cannot check the kernel resume device and offset: ' + str(exc))
     try:
         uuid_device = stat_path(paths.uuid_directory / config['root_uuid'])
         if not stat.S_ISBLK(uuid_device.st_mode):
-            report.problems.append('配置的 UUID 没有指向块设备。')
+            report.problems.append('The configured UUID does not point to a block device.')
         elif uuid_device.st_rdev != stat_path(paths.root).st_dev:
-            report.problems.append('配置的 UUID 与当前根文件系统设备不一致。')
+            report.problems.append('The configured UUID does not match the current root filesystem device.')
     except OSError as exc:
-        report.problems.append('无法核对配置 UUID 对应的块设备：' + str(exc))
+        report.problems.append('Cannot verify the block device for the configured UUID: ' + str(exc))
     try:
         swap_file = Path(config['swap_file'])
         swap_stat = lstat_path(swap_file)
         if not stat.S_ISREG(swap_stat.st_mode):
-            report.problems.append('专用 swap 路径不是普通文件。')
+            report.problems.append('The dedicated swap path is not a regular file.')
         if swap_stat.st_uid != 0 or stat.S_IMODE(swap_stat.st_mode) != 0o600:
-            report.problems.append('专用 swap 文件必须由 root 所有，且权限为 0600。')
+            report.problems.append('The dedicated swap file must be owned by root with permissions 0600.')
         if 'swap_inode' in config and swap_stat.st_ino != config['swap_inode']:
-            report.problems.append('专用 swap 文件的 inode 已改变，可能被重新创建；需重新核算恢复偏移。')
+            report.problems.append('The dedicated swap inode has changed; the file may have been recreated. Recalculate the resume offset.')
         if swap_stat.st_size != config['expected_bytes']:
-            report.problems.append('专用 swap 文件大小与配置不一致。')
+            report.problems.append('The dedicated swap file size does not match the configuration.')
         if swap_stat.st_dev != stat_path(paths.root).st_dev:
-            report.problems.append('专用 swap 文件不在配置所针对的根文件系统上。')
+            report.problems.append('The dedicated swap file is not on the configured root filesystem.')
         active = [row for row in parse_swaps(paths.swaps.read_text())
                   if row['path'] == config['swap_file'] and row['type'] == 'file']
         if len(active) != 1:
-            report.problems.append('专用 swap 文件尚未在 /proc/swaps 中启用。')
+            report.problems.append('The dedicated swap file is not active in /proc/swaps.')
         else:
             row = active[0]
             page_bytes = os.sysconf('SC_PAGESIZE')
             if row['size_kib'] * 1024 < config['expected_bytes'] - page_bytes:
-                report.problems.append('活动 swap 容量小于配置值；请检查文件是否被重建。')
+                report.problems.append('Active swap capacity is smaller than configured; check whether the file was recreated.')
             report.facts['swap_free_kib'] = max(0, row['size_kib'] - row['used_kib'])
             report.facts['swap_priority'] = row['priority']
     except (OSError, ValueError) as exc:
-        report.problems.append('无法检查专用 swap 文件：' + str(exc))
+        report.problems.append('Cannot check the dedicated swap file: ' + str(exc))
     try:
         ability = can_hibernate(runner)
         report.facts['can_hibernate'] = ability
         if ability not in ('yes', 'challenge'):
-            report.problems.append('logind 当前不允许休眠：CanHibernate=' + ability)
+            report.problems.append('logind does not currently allow hibernation: CanHibernate=' + ability)
     except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as exc:
         report.problems.append(str(exc))
     return report
@@ -220,12 +220,13 @@ def notify(title, message, runner=subprocess.run):
 
 
 def not_ready_message(report):
-    prefix = '请先保存工作并正常重启一次，再检查休眠。\n' if report.reboot_required else ''
+    prefix = 'Save your work and reboot normally before checking hibernation again.\n' if report.reboot_required else ''
     return prefix + '\n'.join(report.problems)
 
 
 def show_check(report):
-    print('READY / 静态配置检查通过；实际休眠与恢复仍需验证' if report.ready else 'NOT READY / 休眠条件尚未就绪')
+    print('READY: static configuration checks passed; actual hibernation and resume still need verification.'
+          if report.ready else 'NOT READY: hibernation requirements are not met.')
     if not report.ready: print(not_ready_message(report))
     for name in ('swap_file', 'running_kernel', 'next_boot_kernel', 'configured_kernel', 'expected_resume_device',
                  'active_resume_offset', 'can_hibernate', 'backup'):
@@ -241,29 +242,29 @@ def main(argv=None, *, paths=Paths(), runner=subprocess.run, checker=None):
     report = check()
     if args.check: return show_check(report)
     if not report.ready:
-        notify('休眠尚未就绪', not_ready_message(report), runner)
+        notify('Hibernation is not ready', not_ready_message(report), runner)
         return 1
     try:
-        selection = runner(['dmenu', '-i', '-l', '2', '-p', '保存当前会话到磁盘并关机？'],
+        selection = runner(['dmenu', '-i', '-l', '2', '-p', 'Save this session to disk and power off?'],
                            input=CANCEL + '\n' + CONFIRM + '\n', text=True,
                            capture_output=True, check=False)
     except OSError as exc:
-        notify('无法打开休眠确认菜单', str(exc), runner)
+        notify('Cannot open the hibernation confirmation menu', str(exc), runner)
         return 1
     if selection.returncode != 0 or selection.stdout.strip() != CONFIRM:
         return 0
     # Recheck after confirmation, in case swap or kernel state changed while the menu was open.
     report = check()
     if not report.ready:
-        notify('休眠状态已改变，操作已取消', not_ready_message(report), runner)
+        notify('Hibernation conditions changed; request canceled', not_ready_message(report), runner)
         return 1
     try:
         result = runner(['systemctl', 'hibernate'], capture_output=True, text=True, check=False)
     except OSError as exc:
-        notify('无法请求休眠', str(exc), runner)
+        notify('Cannot request hibernation', str(exc), runner)
         return 1
     if result.returncode:
-        notify('休眠请求失败', result.stderr.strip() or '请在终端检查 systemctl hibernate 的提示。', runner)
+        notify('Hibernation request failed', result.stderr.strip() or 'Check the output of systemctl hibernate in a terminal.', runner)
         return result.returncode
     return 0
 

@@ -1,44 +1,44 @@
-# 2026-09-28 配置整合验证
+# Configuration integration validation: 2026-09-28
 
-构建主机为 Ubuntu 26.04 amd64。此次修改只更新仓库和交付包；没有通过完整安装器重装当前桌面、改写本机引导或触发休眠。为按用户要求推送仓库，另安装 GitHub CLI 并使用用户确认的设备码登录。
+The build host was Ubuntu 26.04 amd64. This update changed the repository and distribution artifacts only. The full installer was not used to reinstall the current desktop, modify its boot configuration, or trigger hibernation. GitHub CLI was installed separately to push the repository using device authorization approved by the user.
 
-## 已完成
+## Completed checks
 
-- 86 个自动化测试通过，全部使用临时目录、fixture 或模拟命令；没有执行真实 sudo/apt/hibernate。
-- 新覆盖范围：150% 及其他缩放值、保留 GTK/Xresources 个人配置、清理旧重复启动块、Teams 路径转义与动态浏览器选择、FortiClient 哈希失败拒绝安装、保留已安装版本且不自动升级/降级。
-- 休眠测试覆盖目标 RAM 容量计算、FIEMAP 与 filefrag 偏移、拒绝不支持的存储、Dracut/initramfs-tools 恢复路径、GRUB 多内核参数、自定义 GRUB 默认项拒绝、回滚范围、root 下只读检查，以及 Python 3.12 对 polkit 路径的权限差异。
-- 桌面休眠助手测试覆盖交换文件身份/权限、当前与下次启动内核、错误或重复 resume 参数、noresume、确认前后复查和取消时不休眠。
-- DWM、st、dmenu、dwmblocks 在临时目录重新编译通过，动态库与 terminfo 检查通过；只有既有 termcmd 未使用警告。
-- 40 个 Shell/Python 文件语法检查通过，git diff --check 通过。
-- 本机对新休眠模块执行纯只读检查，通过并正确识别现有配置；菜单 helper 的静态检查 READY。
-- FortiClient 官方下载地址 HEAD 返回成功；本机安装包的 SHA-256、包名、架构、版本均与固定下载清单一致。
-- 未将真实用户名家目录、根分区 UUID、固定 resume 偏移、VPN 账户资料或认证凭据写入配置快照。
+- All 86 automated tests passed, using temporary directories, fixtures, or mocked commands. The tests did not execute real sudo, APT installation, or hibernation commands.
+- New coverage includes 150% and alternative scaling values, preservation of personal GTK/Xresources settings, removal of duplicate legacy startup blocks, Teams launcher path escaping and browser selection, rejection of FortiClient hash mismatches, and preservation of installed versions without automatic upgrades or downgrades.
+- Hibernation tests cover RAM-based swap sizing, FIEMAP and filefrag offsets, rejection of unsupported storage layouts, Dracut/initramfs-tools resume paths, GRUB parameters across installed kernels, rejection of custom GRUB defaults, rollback scope, read-only checks as root, and Python 3.12 permission handling for polkit paths.
+- Desktop hibernation helper tests cover swap-file identity and permissions, running and next-boot kernel versions, incorrect or duplicate resume parameters, noresume, checks before and after confirmation, and cancellation without hibernating.
+- DWM, st, dmenu, and dwmblocks were rebuilt in temporary directories. Dynamic-library and terminfo checks passed. Only the existing unused termcmd warning remained.
+- Syntax checks passed for 40 Shell/Python files, and git diff --check passed.
+- The new hibernation module passed a read-only check on the host and correctly recognized its existing configuration. The menu helper's static check reported READY.
+- An HTTP HEAD request to the official FortiClient download URL succeeded. The local package's SHA-256, name, architecture, and version matched the pinned download manifest.
+- The configuration snapshot contains no real home-directory paths, root-filesystem UUIDs, fixed resume offsets, VPN account data, or authentication credentials from the source machine.
 
-## 实测范围
+## Scope of testing
 
-没有在全新 Ubuntu 24.04/26.04 虚拟机或 ARM 设备上执行完整安装，也没有执行新的硬件休眠循环。自动化测试和静态配置检查不能证明所有主板、USB 端口或显卡都可以关电/恢复。FortiClient 的 26.04/DWM 本机使用不代表厂商认证支持。
+The complete installer was not run in a fresh Ubuntu 24.04/26.04 virtual machine or on an ARM device, and no new hardware hibernation cycle was performed. Automated tests and static checks cannot establish power-off and resume compatibility for every motherboard, USB port, or GPU. Local FortiClient use on Ubuntu 26.04/DWM does not imply vendor certification.
 
-以下保留初始桌面快照的验证记录，作为既有代码来源；不是此次重新执行全部旧测试的声明。
+The original desktop snapshot's validation record is preserved below as background for existing code. It does not imply that every earlier check was repeated for this update.
 
-# 2026-09-21 原始桌面快照验证
+# Original desktop snapshot validation: 2026-09-21
 
-验证日期：2026-09-21。构建主机为 Ubuntu 26.04 amd64。
+Validation date: 2026-09-21. Build host: Ubuntu 26.04 amd64.
 
-## 已完成
+## Completed checks
 
-- DWM、st、dmenu、dwmblocks 在临时目录重新编译通过，动态库检查无缺失；st terminfo 校验通过。DWM 保留上游已有的 `termcmd` 未使用警告。
-- 使用空的软件包安装记录，分别对官方 Ubuntu 24.04 main/universe 索引及本机 26.04 索引进行 apt 安装模拟；核心依赖、可用 GTK/Qt 前端均解析成功。模拟不是实际安装。
-- 实际下载并校验固定版本字体、Starship 和 fastfetch 的 amd64/arm64 文件。amd64 二进制版本命令正常运行；arm64 仅核对 ELF 架构，未在 ARM 机器运行。
-- 实际执行安装器的资产准备步骤，包括 SHA-256 校验、字体提取、三个插件仓库的固定提交获取。
-- 在临时家目录中执行配置与资产安装，再启动真实 Zsh：Oh My Zsh、命令建议、语法高亮、Starship、eza/bat 别名和输入法环境变量全部加载成功。
-- 用户配置自动化测试覆盖首次安装、重复安装、旧配置迁移、首次备份保留、个人设置与词库保留、拼音组设置、快捷键冲突及符号链接处理。
-- 默认会话与回滚测试使用模拟 AccountsService API 和临时文件，覆盖旧/新 API、备份、路径限制与安全恢复。
-- Shell/Python 语法、只读安装包完整性检查及解压后入口验证通过。
+- DWM, st, dmenu, and dwmblocks compiled successfully in temporary directories, with no missing dynamic libraries. The st terminfo check passed. DWM retained the existing upstream warning for an unused `termcmd` variable.
+- APT installation was simulated using an empty installed-package database against both the official Ubuntu 24.04 main/universe indexes and the host's 26.04 indexes. Core dependencies and available GTK/Qt frontends resolved successfully. These were simulations, not actual installations.
+- Pinned font, Starship, and fastfetch archives for amd64/arm64 were downloaded and verified. Version commands ran successfully for amd64 binaries. ARM binaries were checked for their ELF architecture only and were not run on ARM hardware.
+- The installer's asset preparation step ran successfully, including SHA-256 checks, font extraction, and retrieval of three plugin repositories at fixed commits.
+- Configuration and assets were installed in a temporary home directory, then loaded by a real Zsh process. Oh My Zsh, autosuggestions, syntax highlighting, Starship, eza/bat aliases, and input-method environment variables loaded successfully.
+- User-configuration tests covered fresh and repeated installation, legacy configuration migration, preservation of the first backup, personal settings and dictionaries, Pinyin groups, shortcut conflicts, and symlink handling.
+- Default-session and rollback tests used a mocked AccountsService API and temporary files, covering old and new APIs, backups, path restrictions, and safe restoration.
+- Shell/Python syntax checks, read-only package integrity checks, and verification of the installer entry point after archive extraction all passed.
 
-本次包中的托盘源码沿用已完成的独立 Xvfb 测试：单屏、模拟双屏、图标缩放与隐藏、DWM 重载，以及真实 Flameshot/Fcitx5 Classic UI 图标加入和重载后恢复。
+The included system tray code retains the results of earlier independent Xvfb checks: a single screen, simulated dual screens, icon resizing and hiding, DWM restarts, and docking/restoration of real Flameshot and Fcitx5 Classic UI icons.
 
-## 验证范围
+## Scope of testing
 
-没有在全新虚拟机中执行完整 sudo/apt 安装，也没有验证 ARM 桌面的实际运行、实体显示器热插拔或所有显卡驱动。托盘图标测试不等同于每个应用的中文输入测试。
+The complete sudo/APT installation was not run in a fresh virtual machine. Actual ARM desktop operation, physical monitor hotplugging, and every graphics driver were not tested. Tray-icon tests do not establish Chinese input functionality in every application.
 
-制作此仓库期间没有重装或重启当前桌面。安装脚本应在新 Ubuntu 电脑的普通用户终端运行；受 `NoNewPrivs` 限制的环境会在开始安装前退出。
+The current desktop was not reinstalled or restarted while preparing this repository. Run the installer in a regular terminal on the destination Ubuntu computer. Environments restricted by `NoNewPrivs` exit before installation begins.

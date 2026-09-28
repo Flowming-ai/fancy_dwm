@@ -6,9 +6,9 @@ configuration {
     font: "JetBrainsMono Nerd Font Mono 14";
     matching: "fuzzy";
     drun-display-format: "{name}";
-    display-drun: "应用";
-    display-run: "命令";
-    display-window: "窗口";
+    display-drun: "Applications";
+    display-run: "Commands";
+    display-window: "Windows";
     sidebar-mode: true;
 }
 @theme "gruvbox-dark"

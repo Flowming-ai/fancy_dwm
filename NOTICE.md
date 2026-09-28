@@ -1,19 +1,19 @@
-# 来源与许可证
+# Sources and licenses
 
-此仓库是当前 Ubuntu 桌面的可迁移配置快照，包含经过适配的第三方源码。
+This repository is a portable configuration snapshot of an Ubuntu desktop. It includes adapted third-party source code.
 
-- DWM、st、dmenu、dwmblocks 的原始提交列于 [payload/SOURCES.txt](payload/SOURCES.txt)，许可证分别保留在各源码目录中。
-- 系统托盘协议参考 [suckless systray 补丁](https://dwm.suckless.org/patches/systray/)，已适配当前 Luke DWM 的状态栏、窗口吞并和重载行为。
-- Oh My Zsh、zsh-autosuggestions、zsh-syntax-highlighting、Starship、fastfetch 与 Nerd Fonts 的固定下载来源见 [scripts/downloads.json](scripts/downloads.json)。安装时从官方仓库获取，各自适用上游许可证。
-- 当前壁纸取自 Luke Smith voidrice，作品为 Thomas Thiemeyer 的 *Road to Samarkand*；保留原来源说明，不将它声明为本项目原创或授予新的作品许可。
-- Ubuntu 软件包由已配置的软件源安装，适用各包自身许可证。
-- Teams 入口打开 Microsoft 官方网站，不分发 Teams 程序。入口图标来自 Papirus，附带版权与 GPL-3 许可证于 `payload/home/.local/share/larbs-ubuntu/licenses/teams-icon/`。
-- FortiClient 是可选的 Fortinet VPN-only 客户端，从官方 filestore HTTPS 地址下载并检查固定 SHA-256；仓库不重新分发其专有安装包或用户 VPN 配置。
-- 休眠模块依据目标主机生成 GRUB/initramfs 配置；参考 Linux 内核的 [platform 休眠说明](https://docs.kernel.org/power/basic-pm-debugging.html) 与 [USB 电源管理说明](https://docs.kernel.org/driver-api/usb/power-management.html)。硬件实际关电及唤醒仍需测试。
+- The original DWM, st, dmenu, and dwmblocks commits are listed in [payload/SOURCES.txt](payload/SOURCES.txt). Their licenses are preserved in the respective source directories.
+- The system tray is based on the [suckless systray patch](https://dwm.suckless.org/patches/systray/), adapted to the current Luke DWM status bar, window swallowing, and restart behavior.
+- Pinned download sources for Oh My Zsh, zsh-autosuggestions, zsh-syntax-highlighting, Starship, fastfetch, and Nerd Fonts are listed in [scripts/downloads.json](scripts/downloads.json). The installer retrieves them from their official repositories; their upstream licenses apply.
+- The wallpaper comes from Luke Smith's voidrice repository and depicts Thomas Thiemeyer's *Road to Samarkand*. The original attribution is preserved. This project does not claim authorship or grant a new license for the artwork.
+- Ubuntu packages are installed from the configured repositories and remain subject to their respective licenses.
+- The Teams launcher opens Microsoft's official website and does not distribute the Teams application. Its icon comes from Papirus; copyright information and the GPL-3 license are included in `payload/home/.local/share/larbs-ubuntu/licenses/teams-icon/`.
+- FortiClient is an optional Fortinet VPN-only client downloaded from the official filestore HTTPS endpoint and checked against a pinned SHA-256 hash. This repository does not redistribute the proprietary installer or user VPN configuration.
+- The hibernation module generates GRUB/initramfs settings for the destination machine. References: the Linux kernel's [platform hibernation documentation](https://docs.kernel.org/power/basic-pm-debugging.html) and [USB power management documentation](https://docs.kernel.org/driver-api/usb/power-management.html). Actual hardware power-off and wake behavior still require testing.
 
-支持版本以 [Ubuntu 官方发行列表](https://ubuntu.com/project/docs/release-team/list-of-releases/) 为参考。这里只针对 Ubuntu Desktop 24.04 与 26.04 设置依赖与架构检查，不代表在所有硬件上完成了验证。
+Supported releases are based on the [official Ubuntu release list](https://ubuntu.com/project/docs/release-team/list-of-releases/). Dependency and architecture checks target Ubuntu Desktop 24.04 and 26.04; this does not imply validation on every hardware configuration.
 
-本仓库新编写的安装、备份与测试脚本使用 MIT 许可证：
+The installation, backup, and test scripts written for this repository are licensed under the MIT License:
 
 Copyright (c) 2026 ubuntu-dwm-setup contributors
 

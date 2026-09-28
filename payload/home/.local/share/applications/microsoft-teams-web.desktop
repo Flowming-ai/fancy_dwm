@@ -2,12 +2,10 @@
 Version=1.0
 Type=Application
 Name=Microsoft Teams
-Name[zh_CN]=Microsoft Teams
 Comment=Microsoft Teams web app; uses a supported installed browser
-Comment[zh_CN]=Microsoft Teams 官方网页版；使用已安装的浏览器
 Exec=teams-web
 Icon=microsoft-teams-web
 Terminal=false
 StartupNotify=true
 Categories=Network;InstantMessaging;
-Keywords=Teams;Microsoft;Meeting;Chat;会议;聊天;
+Keywords=Teams;Microsoft;Meeting;Chat;

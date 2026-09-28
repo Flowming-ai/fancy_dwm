@@ -16,4 +16,4 @@ for program in dwm/dwm st/st dmenu/dmenu dmenu/stest dwmblocks/dwmblocks; do
         exit 1
     fi
 done
-printf '\nDWM、st、dmenu、dwmblocks 编译与动态库检查通过；未安装。\n'
+printf '\nDWM, st, dmenu, and dwmblocks passed build and dynamic-library checks; nothing was installed.\n'

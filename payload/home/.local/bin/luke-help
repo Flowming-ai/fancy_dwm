@@ -1,2 +1,2 @@
 #!/bin/sh
-exec st -t 'DWM shortcuts / 快捷键' -e less -R "$HOME/.local/share/larbs-ubuntu/KEYS.txt"
+exec st -t 'DWM shortcuts' -e less -R "$HOME/.local/share/larbs-ubuntu/KEYS.txt"

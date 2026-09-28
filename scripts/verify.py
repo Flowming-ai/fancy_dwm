@@ -10,7 +10,7 @@ def main():
     root = Path(__file__).resolve().parents[1]
     manifest = root / "SHA256SUMS"
     if not manifest.is_file():
-        raise SystemExit("缺少 SHA256SUMS；请使用完整安装包。")
+        raise SystemExit("SHA256SUMS is missing; use the complete installation archive.")
     seen = set()
     failures = []
     for line in manifest.read_text().splitlines():
@@ -42,8 +42,8 @@ def main():
     if required - seen:
         failures.append("Missing required manifest entries: " + ", ".join(sorted(required - seen)))
     if failures:
-        raise SystemExit("安装包校验失败：\n" + "\n".join(failures))
-    print(f"安装包完整性校验通过（{len(seen)} 个文件）。")
+        raise SystemExit("Installation archive verification failed:\n" + "\n".join(failures))
+    print(f"Installation archive integrity verified ({len(seen)} files).")
 
 
 if __name__ == "__main__":
