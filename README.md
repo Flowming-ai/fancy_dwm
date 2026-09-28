@@ -126,35 +126,6 @@ sh scripts/rollback.sh "$HOME/.local/state/ubuntu-dwm-setup/YOUR_BACKUP_DIRECTOR
 sh scripts/rollback.sh "$HOME/.local/state/ubuntu-dwm-setup/YOUR_BACKUP_DIRECTORY" --apply
 ```
 
-## Maintain the setup with Git
-
-The local distribution includes a Git repository and a `.bundle` containing its complete commit history. You can install from the extracted archive or clone the bundle:
-
-```sh
-git clone ubuntu-dwm-setup.bundle ubuntu-dwm-setup
-cd ubuntu-dwm-setup
-sh install.sh
-```
-
-After editing the configuration, review your changes, update the checksum manifest, and commit:
-
-```sh
-python3 scripts/update-checksums.py
-sh install.sh --check
-git add .
-git commit -m "Update my desktop configuration"
-```
-
-Keep passwords, keys, and personal browser directories out of the repository. The remote is `https://github.com/Flowming-ai/fancy_dwm.git`. The installer includes GitHub CLI. To push from a new computer, run `gh auth login --hostname github.com --git-protocol https --web` and complete device authorization on GitHub. GitHub CLI manages authentication locally on that computer; credentials are not included in this repository. After committing, run `git push origin main`.
-
-Rebuild the portable distribution after committing all changes and passing the integrity check:
-
-```sh
-sh scripts/package.sh ../outputs
-```
-
-This generates `ubuntu-dwm-setup.tar.gz`, `ubuntu-dwm-setup.bundle`, and their SHA-256 files. The GitHub repository contains configuration and source code, not download caches, proprietary VPN binaries, or local machine backups.
-
 ## Validation and sources
 
 See the [validation record](VALIDATION.md), [sources and licenses](NOTICE.md), and [pinned downloads](scripts/downloads.json). Upstream source licenses are preserved. Pinned downloads are checked with SHA-256, plugins use fixed Git commits, and Ubuntu packages receive updates from the configured repositories.
