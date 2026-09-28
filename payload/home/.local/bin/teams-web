@@ -1,0 +1,17 @@
+#!/bin/sh
+# Open Microsoft's Teams website using an installed browser; no local profile
+# or credentials are copied by the setup. Browser lookup happens at launch.
+set -eu
+url=https://teams.microsoft.com/
+for browser in google-chrome google-chrome-stable microsoft-edge microsoft-edge-stable chromium chromium-browser; do
+    if command -v "$browser" >/dev/null 2>&1; then
+        exec "$browser" "--app=$url"
+    fi
+done
+message='Chrome, Edge or Chromium is needed for a separate Teams app window. Opening Teams in the default browser instead.'
+printf '%s\n' "$message" >&2
+if command -v notify-send >/dev/null 2>&1; then notify-send 'Microsoft Teams' "$message" || :; fi
+if command -v firefox >/dev/null 2>&1; then exec firefox "$url"; fi
+if command -v xdg-open >/dev/null 2>&1; then exec xdg-open "$url"; fi
+printf '%s\n' 'No browser was found. Install a browser and run teams-web again.' >&2
+exit 127

@@ -34,6 +34,10 @@ def main():
         "scripts/rollback.sh", "payload/apply-user.py",
         "payload/src/dwm/systray.c", "payload/system/dwm-session",
         "payload/system/dwm.desktop", "README.md",
+        "payload/desktop-extras.py", "payload/home/.local/bin/dwm-hibernate",
+        "payload/home/.local/bin/dwm-scale-apply", "payload/home/.local/bin/teams-web",
+        "scripts/install-forticlient.py", "scripts/hibernate/configure.py",
+        "scripts/hibernate/rollback.py", "scripts/package.sh",
     }
     if required - seen:
         failures.append("Missing required manifest entries: " + ", ".join(sorted(required - seen)))

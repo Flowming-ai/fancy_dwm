@@ -9,6 +9,7 @@ backup never overwrites the first snapshot. Dictionary directories are untouched
 """
 import configparser
 import io
+import importlib.util
 import os
 from pathlib import Path
 import re
@@ -127,6 +128,14 @@ def apply(package, home, backup=None, check=False):
             safe(relative)
             pending[relative] = (source.read_bytes(), source.stat().st_mode & 0o777)
 
+    # Merge desktop scaling and create a launcher for this destination home.
+    # The same plan/save path keeps preflight and rollback behavior consistent.
+    extras_path = package / 'desktop-extras.py'
+    spec = importlib.util.spec_from_file_location('dwm_desktop_extras', extras_path)
+    extras = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(extras)
+    extras.configure(read, plan, home, percent=int(os.environ.get('DWM_SETUP_SCALE', '150')))
+
     shell = read('.zshrc')
     if LEGACY_ZSHRC and shell.startswith(LEGACY_ZSHRC):
         shell = shell[len(LEGACY_ZSHRC):]
@@ -137,10 +146,8 @@ def apply(package, home, backup=None, check=False):
     profile = managed_block(read('.profile'), 'FCITX5-ENV',
                             '[ -r "$HOME/.config/fcitx5/dwm-env.sh" ] && . "$HOME/.config/fcitx5/dwm-env.sh"')
     plan('.profile', profile)
-    # Retire only our older startup block: the session now owns XScreenSaver.
-    xprofile = read('.xprofile')
-    if '# BEGIN DWM-XSCREENSAVER' in xprofile:
-        plan('.xprofile', managed_block(xprofile, 'DWM-XSCREENSAVER'))
+    # desktop-extras already retires the old scale and XScreenSaver startup
+    # blocks together; do not overwrite that plan using the original file.
 
     cfg = ini(read('.config/fcitx5/config'))
     for section in cfg.sections():

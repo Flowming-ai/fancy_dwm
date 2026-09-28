@@ -1,6 +1,12 @@
 # Luke / LARBS Ubuntu adaptation
 
-This package is used by the adjacent install-larbs-ubuntu.sh installer. It contains the pinned sources, curated user configuration, and DWM session launcher. See SOURCES.txt and the preserved source licenses.
+This payload is used by the repository's install.sh installer. It contains the pinned sources, curated user configuration, and DWM session launcher. See SOURCES.txt and the preserved source licenses.
+
+The September 2026 update includes portable display scaling (150% by default),
+the official Teams web launcher and a guarded hibernation menu helper. Shared
+GTK/Xresources settings are merged by desktop-extras.py through apply-user.py's
+backup plan. Hibernation boot setup and FortiClient are explicit optional modules
+selected by --with-hibernation, --with-forticlient or --full; see the root README.
 
 ## DWM system tray update
 

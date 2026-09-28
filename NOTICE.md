@@ -7,6 +7,9 @@
 - Oh My Zsh、zsh-autosuggestions、zsh-syntax-highlighting、Starship、fastfetch 与 Nerd Fonts 的固定下载来源见 [scripts/downloads.json](scripts/downloads.json)。安装时从官方仓库获取，各自适用上游许可证。
 - 当前壁纸取自 Luke Smith voidrice，作品为 Thomas Thiemeyer 的 *Road to Samarkand*；保留原来源说明，不将它声明为本项目原创或授予新的作品许可。
 - Ubuntu 软件包由已配置的软件源安装，适用各包自身许可证。
+- Teams 入口打开 Microsoft 官方网站，不分发 Teams 程序。入口图标来自 Papirus，附带版权与 GPL-3 许可证于 `payload/home/.local/share/larbs-ubuntu/licenses/teams-icon/`。
+- FortiClient 是可选的 Fortinet VPN-only 客户端，从官方 filestore HTTPS 地址下载并检查固定 SHA-256；仓库不重新分发其专有安装包或用户 VPN 配置。
+- 休眠模块依据目标主机生成 GRUB/initramfs 配置；参考 Linux 内核的 [platform 休眠说明](https://docs.kernel.org/power/basic-pm-debugging.html) 与 [USB 电源管理说明](https://docs.kernel.org/driver-api/usb/power-management.html)。硬件实际关电及唤醒仍需测试。
 
 支持版本以 [Ubuntu 官方发行列表](https://ubuntu.com/project/docs/release-team/list-of-releases/) 为参考。这里只针对 Ubuntu Desktop 24.04 与 26.04 设置依赖与架构检查，不代表在所有硬件上完成了验证。
 

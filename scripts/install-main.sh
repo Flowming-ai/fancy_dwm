@@ -7,13 +7,20 @@ base=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 payload="$base/payload"
 check=0
 skip_default=0
+with_hibernation=0
+with_forticlient=0
+scale=150
 usage() {
     cat <<'HELP'
-Usage: sh install.sh [--check] [--skip-default-session]
+Usage: sh install.sh [--check] [--full] [--scale PERCENT] [--skip-default-session]
 
 Supported: Ubuntu Desktop 24.04 or 26.04, amd64 or arm64, a regular sudo user.
   --check                 Verify this checkout and report the host; change nothing.
   --skip-default-session  Install DWM without changing the login-session preference.
+  --scale PERCENT         Desktop scale: 100, 125, 150 (default), 175 or 200.
+  --with-hibernation      Configure disk hibernation on supported ext4/GRUB hosts.
+  --with-forticlient      Install the pinned FortiClient VPN-only client (amd64).
+  --full                  Include both optional modules above.
   --help                  Show this help.
 
 The installer installs apt packages and pinned official shell/font releases,
@@ -23,20 +30,30 @@ Sudo may request your password. Run without sudo before sh.
 HELP
 }
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
-for arg in "$@"; do
-    case "$arg" in
+while (( $# )); do
+    case "$1" in
         --check) check=1 ;;
         --skip-default-session) skip_default=1 ;;
+        --with-hibernation) with_hibernation=1 ;;
+        --with-forticlient) with_forticlient=1 ;;
+        --full) with_hibernation=1; with_forticlient=1 ;;
+        --scale) [[ $# -ge 2 ]] || die '--scale requires a percentage'; scale=$2; shift ;;
+        --scale=*) scale=${1#*=} ;;
         --help|-h) usage; exit 0 ;;
         *) usage >&2; exit 2 ;;
     esac
+    shift
 done
+case "$scale" in 100|125|150|175|200) ;; *) die 'Scale must be 100, 125, 150, 175 or 200.' ;; esac
+export DWM_SETUP_SCALE="$scale"
 command -v python3 >/dev/null || die 'python3 is required (included in Ubuntu Desktop).'
 # The check command stays read-only even inside restricted agent environments.
 if (( check )); then
     python3 "$base/scripts/verify.py"
     bash -n "$base/scripts/install-main.sh"
     sh -n "$base/install.sh"
+    if (( with_forticlient )); then python3 "$base/scripts/install-forticlient.py" --check; fi
+    if (( with_hibernation )); then python3 "$base/scripts/hibernate/configure.py" --check; fi
     if [[ -r /etc/os-release ]]; then
         . /etc/os-release
         printf 'Host: %s; architecture: %s\n' "${PRETTY_NAME:-unknown}" "$(dpkg --print-architecture 2>/dev/null || uname -m)"
@@ -75,6 +92,8 @@ PY
 python3 "$base/scripts/verify.py"
 python3 "$base/scripts/install-assets.py" check "$HOME"
 python3 "$payload/apply-user.py" --check "$payload" "$HOME"
+if (( with_forticlient )); then python3 "$base/scripts/install-forticlient.py" --check; fi
+if (( with_hibernation )); then python3 "$base/scripts/hibernate/configure.py" --check; fi
 # This project targets Desktop installations with an existing login manager.
 if [[ ! -s /etc/X11/default-display-manager ]] \
 && ! command -v gdm3 >/dev/null && ! command -v gdm >/dev/null \
@@ -83,6 +102,8 @@ if [[ ! -s /etc/X11/default-display-manager ]] \
 fi
 printf '\nInstalling Ubuntu DWM setup for %s (%s).\nSudo will ask for your local password when needed.\n' "$task_user" "$arch"
 sudo -v
+# Complete the privileged hardware preflight before apt or desktop changes.
+if (( with_hibernation )); then sudo python3 "$base/scripts/hibernate/configure.py" --check --user "$task_user"; fi
 
 state="$HOME/.local/state/ubuntu-dwm-setup"
 mkdir -p "$state"
@@ -120,7 +141,7 @@ printf 'Backup directory: %s\n' "$backup"
 # Ubuntu Desktop normally enables universe already. Enable it explicitly for
 # clean installations; no PPA or third-party apt repository is added.
 sudo apt-get update
-sudo apt-get install -y --no-install-recommends ca-certificates curl git \
+sudo apt-get --no-remove install -y --no-install-recommends ca-certificates curl git gh \
     software-properties-common python3 xz-utils
 sudo add-apt-repository -y universe
 sudo apt-get update
@@ -132,10 +153,10 @@ packages=(
     libfontconfig-dev libfreetype-dev libharfbuzz-dev libx11-xcb-dev libxcb1-dev libxcb-res0-dev
     xserver-xorg-core xserver-xorg-input-libinput xinit xauth rofi kitty picom dunst xwallpaper xclip x11-utils x11-xserver-utils
     fcitx5 fcitx5-chinese-addons fcitx5-config-qt fcitx5-frontend-gtk3 fcitx5-frontend-qt5 im-config
-    dbus-x11 xdg-utils xdg-desktop-portal-gtk fontconfig fonts-noto-cjk fonts-noto-color-emoji papirus-icon-theme
+    dbus-x11 xdg-utils xdg-desktop-portal-gtk desktop-file-utils xsettingsd fontconfig fonts-noto-cjk fonts-noto-color-emoji papirus-icon-theme
     lf btop neovim bc ncal less file maim slop flameshot playerctl pamixer pulsemixer
     arandr brightnessctl suckless-tools pulseaudio-utils network-manager libnotify-bin
-    ncurses-bin zsh util-linux bat eza xscreensaver xscreensaver-data-extra xscreensaver-gl-extra
+    ncurses-bin zsh util-linux e2fsprogs bat eza xscreensaver xscreensaver-data-extra xscreensaver-gl-extra
 )
 # Frontends vary between Ubuntu releases; GTK3 and Qt5 are always installed.
 for optional in fcitx5-frontend-gtk2 fcitx5-frontend-gtk4 fcitx5-frontend-qt6; do
@@ -148,7 +169,7 @@ if has_candidate fastfetch; then packages+=(fastfetch); need_fastfetch=0; fi
 for package in "${packages[@]}"; do
     has_candidate "$package" || die "No apt candidate for $package. Check Ubuntu universe and your configured mirrors."
 done
-sudo apt-get install -y --no-install-recommends "${packages[@]}"
+sudo apt-get --no-remove install -y --no-install-recommends "${packages[@]}"
 
 # Network archives are checked against committed SHA256 values before use.
 # Git repositories are checked out at full, fixed commit IDs. Build as user.
@@ -220,6 +241,7 @@ python3 "$staged_payload/apply-user.py" "$staged_payload" "$HOME" "$backup"
 im-config -n fcitx5
 tic -x -o "$HOME/.terminfo" "$staged_payload/src/st/st.info"
 fc-cache -f "$HOME/.local/share/fonts/JetBrainsMono"
+update-desktop-database "$HOME/.local/share/applications"
 zsh -n "$HOME/.zshrc"
 # Do not launch or replace input-method processes in the running desktop.
 current_shell=$(getent passwd "$task_user" | cut -d: -f7)
@@ -229,8 +251,18 @@ fi
 if (( ! skip_default )); then
     python3 "$base/scripts/set-default-session.py" "$task_user" "$backup"
 fi
+if (( with_forticlient )); then
+    python3 "$base/scripts/install-forticlient.py" --apply --state-dir "$backup/extras"
+fi
+if (( with_hibernation )); then
+    sudo python3 "$base/scripts/hibernate/configure.py" --apply --user "$task_user" | tee "$backup/hibernate.log"
+fi
 printf '\nInstallation complete. Save your work, then log out and sign in to DWM.\n'
 printf 'The current desktop has not been restarted.\n'
 printf 'Terminal: Super+Enter; launcher: Alt+d; Chinese: Ctrl+Space; help: Super+F1.\n'
 printf 'Backup/log: %s\nEditable sources: %s/.local/src/larbs-ubuntu\n' "$backup" "$HOME"
 printf 'Restore preview: bash %q %q\n' "$backup/rollback.sh" "$backup"
+printf 'Desktop scale: %s%%; Teams: search Microsoft Teams in Rofi.\n' "$scale"
+if (( with_hibernation )); then
+    printf 'Hibernation has its own root backup/rollback printed above. Save work and reboot normally before testing.\n'
+fi

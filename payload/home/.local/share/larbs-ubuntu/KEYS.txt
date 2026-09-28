@@ -38,6 +38,8 @@ Super+Shift+Backspace           重载 DWM，保留打开的窗口
 Print / Shift+Print             全屏截图 / 框选截图（保存并复制）
 Flameshot                       原生版本随 DWM 启动，点击右侧托盘图标使用
 XScreenSaver                    随 DWM 启动；会话菜单可锁屏
+磁盘休眠                        需安装时选择 --with-hibernation（或 --full）；
+                                首次配置后正常重启，并通过 dwm-hibernate --check。
 Super+- / Super+=               音量减 / 加
 Super+p                         播放/暂停
 Super+, / Super+.               上一首 / 下一首
@@ -50,6 +52,9 @@ st 复制/粘贴：Ctrl+Shift+c/v；Alt+j/k 滚动；Ctrl+Shift+PageUp/Down 缩�
 Kitty 保留 .85 背景透明；st 为 .90。字体为 JetBrainsMono Nerd Font。
 Zsh / Starship / 插件：~/.config/dwm-shell/zshrc；个人覆盖：~/.zshrc.local。
 拼音为本地整句输入、7 候选和词频学习；新安装默认关闭云拼音。
+显示默认 150%（Xft DPI）；安装时可用 --scale 100/125/150/175/200 调整。
+Alt+d 搜索 Microsoft Teams：使用已安装的 Chrome/Edge/Chromium 打开独立窗口。
+没有这些浏览器时，Teams 启动器会提示并使用 Firefox/默认浏览器普通窗口。
 
 配置源码：~/.local/src/larbs-ubuntu/{dwm,st,dmenu,dwmblocks}
 安装日志/备份：~/.local/state/larbs-ubuntu/

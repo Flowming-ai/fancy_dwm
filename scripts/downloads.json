@@ -39,5 +39,12 @@
       "url": "https://github.com/fastfetch-cli/fastfetch/releases/download/2.68.1/fastfetch-linux-aarch64-polyfilled.tar.gz",
       "sha256": "8845d0485fda958b7a35639efad8bebcf9bc3a237fcf304c35b6ff60bb1b331f"
     }
+  },
+  "forticlient": {
+    "version": "7.4.3.5411",
+    "amd64": {
+      "url": "https://filestore.fortinet.com/forticlient/downloads/forticlient_vpn_7.4.3.5411_amd64.deb",
+      "sha256": "d2c0366decbf0b907fbf0d9306b8ac0b705d2d9cb4eb7b946ae06ce5388d4e5a"
+    }
   }
 }

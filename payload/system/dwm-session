@@ -11,7 +11,6 @@ export TERMINAL=st EDITOR=nvim
 SHELL=$(command -v zsh 2>/dev/null || printf /bin/sh)
 export SHELL
 . "$HOME/.config/fcitx5/dwm-env.sh"
-dbus-update-activation-environment DISPLAY XAUTHORITY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE GTK_IM_MODULE QT_IM_MODULE XMODIFIERS GLFW_IM_MODULE PATH >/dev/null 2>&1 || :
 session_key=$(printf '%s' "$DISPLAY" | tr -c 'a-zA-Z0-9_-' '_')
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dwm"
 runtime="${XDG_RUNTIME_DIR:-$HOME/.local/state}/larbs-ubuntu-$session_key"
@@ -36,6 +35,10 @@ cleanup() {
 }
 trap cleanup EXIT
 trap 'exit 0' HUP INT TERM
+if [ -r "$HOME/.config/dwm-scale/session.sh" ]; then
+    . "$HOME/.config/dwm-scale/session.sh" >>"$state_dir/scaling.log" 2>&1
+fi
+dbus-update-activation-environment DISPLAY XAUTHORITY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE GTK_IM_MODULE QT_IM_MODULE XMODIFIERS GLFW_IM_MODULE QT_SCALE_FACTOR_ROUNDING_POLICY PATH >/dev/null 2>&1 || :
 xsetroot -solid '#282828' -cursor_name left_ptr
 if [ -f "$HOME/.local/share/larbs-ubuntu/wallpaper.jpg" ]; then
     xwallpaper --zoom "$HOME/.local/share/larbs-ubuntu/wallpaper.jpg" || :

@@ -1,7 +1,8 @@
 #!/bin/sh
 set -eu
-choice=$(printf '%s\n' 'Cancel / 取消' 'Restart DWM / 重载配置' 'Input method / 输入法设置' 'Lock / 锁屏' 'Log out / 注销' | dmenu -i -p 'Session') || exit 0
+choice=$(printf '%s\n' 'Cancel / 取消' 'Restart DWM / 重载配置' 'Input method / 输入法设置' 'Lock / 锁屏' 'Hibernate / 真正休眠' 'Log out / 注销' | dmenu -i -p 'Session') || exit 0
 case "$choice" in
+    'Hibernate / 真正休眠') exec "$HOME/.local/bin/dwm-hibernate" ;;
     'Input method / 输入法设置') exec fcitx5-config-qt ;;
     'Lock / 锁屏')
         if command -v xscreensaver-command >/dev/null 2>&1 && xscreensaver-command --lock; then exit 0; fi

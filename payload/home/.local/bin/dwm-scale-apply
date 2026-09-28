@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+"""Apply Xft resources and reload/start our per-display XSETTINGS manager.
+
+Use the distribution's xsettingsd, so the payload is architecture independent.
+Another desktop's existing settings manager is never deliberately replaced.
+"""
+import ctypes as C
+import ctypes.util
+import fcntl
+import os
+from pathlib import Path
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import time
+
+
+class Selection:
+    def __init__(self):
+        library = ctypes.util.find_library('X11')
+        if not library:
+            raise RuntimeError('libX11 is required to apply DWM display scaling.')
+        self.x = C.CDLL(library)
+        self.x.XOpenDisplay.argtypes = [C.c_char_p]
+        self.x.XOpenDisplay.restype = C.c_void_p
+        self.x.XDefaultScreen.argtypes = [C.c_void_p]
+        self.x.XDefaultScreen.restype = C.c_int
+        self.x.XInternAtom.argtypes = [C.c_void_p, C.c_char_p, C.c_int]
+        self.x.XInternAtom.restype = C.c_ulong
+        self.x.XGetSelectionOwner.argtypes = [C.c_void_p, C.c_ulong]
+        self.x.XGetSelectionOwner.restype = C.c_ulong
+        self.x.XCloseDisplay.argtypes = [C.c_void_p]
+        self.display = self.x.XOpenDisplay(None)
+        if not self.display:
+            raise RuntimeError('Cannot connect to the X11 display.')
+        self.screen = self.x.XDefaultScreen(self.display)
+        self.atom = self.x.XInternAtom(self.display, f'_XSETTINGS_S{self.screen}'.encode(), 0)
+
+    def owner(self):
+        return self.x.XGetSelectionOwner(self.display, self.atom)
+
+    def close(self):
+        self.x.XCloseDisplay(self.display)
+
+
+def owned_pid(pidfile, command, display, proc=Path('/proc')):
+    """Never signal a recycled PID, other user, display, or xsettingsd command."""
+    try:
+        pid = int(pidfile.read_text().strip())
+        process = proc / str(pid)
+        arguments = process.joinpath('cmdline').read_bytes().rstrip(b'\0').split(b'\0')
+        environment = process.joinpath('environ').read_bytes().split(b'\0')
+        if (pid > 1 and process.stat().st_uid == os.getuid()
+                and arguments == [argument.encode() for argument in command]
+                and ('DISPLAY=' + display).encode() in environment):
+            return pid
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def apply_scaling():
+    display_name = os.environ.get('DISPLAY')
+    if not display_name or os.environ.get('XDG_SESSION_TYPE') == 'wayland':
+        return
+    home = Path.home()
+    config = home / '.config/xsettingsd/xsettingsd.conf'
+    binary = shutil.which('xsettingsd')
+    if not binary or not config.is_file():
+        raise RuntimeError('Install xsettingsd and apply the DWM display configuration first.')
+    resources = home / '.Xresources'
+    if resources.is_file():
+        subprocess.run(['xrdb', '-merge', str(resources)], check=True)
+    selection = Selection()
+    try:
+        state = home / '.local/state/dwm-scale'
+        state.mkdir(parents=True, exist_ok=True, mode=0o700)
+        key = re.sub(r'[^a-zA-Z0-9_-]', '_', display_name) + '-' + str(selection.screen)
+        pidfile = state / (key + '.pid')
+        command = [binary, '-c', str(config), '-s', str(selection.screen)]
+        with (state / (key + '.lock')).open('a') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            pid = owned_pid(pidfile, command, display_name)
+            if pid is not None:
+                os.kill(pid, signal.SIGHUP)
+                print('Reloaded DWM display scaling.')
+            elif selection.owner():
+                print('An existing desktop settings manager is active; left it running.')
+            else:
+                with (state / 'xsettingsd.log').open('ab') as log:
+                    child = subprocess.Popen(command, stdin=subprocess.DEVNULL,
+                                             stdout=log, stderr=log,
+                                             start_new_session=True, close_fds=True)
+                for _ in range(30):
+                    if child.poll() is not None:
+                        raise RuntimeError('xsettingsd exited; see ' + str(state / 'xsettingsd.log'))
+                    if selection.owner():
+                        pidfile.write_text(str(child.pid) + '\n')
+                        print('Started DWM display scaling manager.')
+                        break
+                    time.sleep(0.05)
+                else:
+                    child.terminate()
+                    child.wait(timeout=3)
+                    raise RuntimeError('Timed out waiting for the display settings manager.')
+    finally:
+        selection.close()
+
+
+if __name__ == '__main__':
+    try:
+        apply_scaling()
+    except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+        print('DWM scaling: ' + str(error), file=sys.stderr)
+        raise SystemExit(1)

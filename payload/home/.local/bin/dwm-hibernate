@@ -1,0 +1,272 @@
+#!/usr/bin/env python3
+"""Read-only hibernation guards, followed by an explicit DWM menu confirmation."""
+from dataclasses import dataclass, field
+from pathlib import Path
+import argparse
+import json
+import os
+import re
+import shlex
+import stat
+import subprocess
+import sys
+import uuid
+
+CONFIRM = 'Hibernate now / 立即休眠'
+CANCEL = 'Cancel / 取消'
+
+
+@dataclass(frozen=True)
+class Paths:
+    config: Path = Path('/var/lib/dwm-hibernate/config.json')
+    cmdline: Path = Path('/proc/cmdline')
+    resume: Path = Path('/sys/power/resume')
+    resume_offset: Path = Path('/sys/power/resume_offset')
+    swaps: Path = Path('/proc/swaps')
+    root: Path = Path('/')
+    uuid_directory: Path = Path('/dev/disk/by-uuid')
+    boot_kernel: Path = Path('/boot/vmlinuz')
+    kernel_release: Path = Path('/proc/sys/kernel/osrelease')
+    grub_defaults: Path = Path('/etc/default/grub')
+    grub_dropins: Path = Path('/etc/default/grub.d')
+
+
+@dataclass
+class CheckResult:
+    problems: list[str] = field(default_factory=list)
+    facts: dict = field(default_factory=dict)
+    reboot_required: bool = False
+
+    @property
+    def ready(self):
+        return not self.problems
+
+
+def natural_number(value, name):
+    if isinstance(value, bool) or not re.fullmatch(r'[0-9]+', str(value)):
+        raise ValueError(name + ' must be a non-negative integer')
+    return int(value)
+
+
+def load_config(path):
+    data = json.loads(path.read_text())
+    required = ('swap_file', 'root_uuid', 'resume_offset', 'expected_bytes', 'configured_kernel', 'backup')
+    if not isinstance(data, dict) or any(name not in data for name in required):
+        raise ValueError('config.json lacks required configuration fields')
+    if not isinstance(data['swap_file'], str) or not Path(data['swap_file']).is_absolute():
+        raise ValueError('swap_file must be an absolute path')
+    data['root_uuid'] = str(uuid.UUID(data['root_uuid']))
+    data['resume_offset'] = natural_number(data['resume_offset'], 'resume_offset')
+    data['expected_bytes'] = natural_number(data['expected_bytes'], 'expected_bytes')
+    if data['expected_bytes'] <= 0: raise ValueError('expected_bytes must be positive')
+    if 'swap_inode' in data:
+        data['swap_inode'] = natural_number(data['swap_inode'], 'swap_inode')
+    return data
+
+
+def kernel_arguments(text, key):
+    prefix = key + '='
+    return [word[len(prefix):] for word in shlex.split(text) if word.startswith(prefix)]
+
+
+def validate_grub_defaults(text):
+    # Parse only literal assignments; never execute bootloader configuration.
+    for line in text.splitlines():
+        match = re.match(r'^\s*(?:export\s+)?(GRUB_DEFAULT|GRUB_SAVEDEFAULT)\s*=(.*)$', line)
+        if not match:
+            continue
+        words = shlex.split(match[2], comments=True)
+        allowed = (['0'],) if match[1] == 'GRUB_DEFAULT' else ([], [''], ['false'], ['0'], ['no'])
+        if words not in allowed:
+            raise ValueError('需要默认 GRUB_DEFAULT=0 且不能启用保存启动项；请先检查 ' + match[1])
+
+
+def parse_swaps(text):
+    rows = []
+    for line in text.splitlines()[1:]:
+        parts = line.split()
+        if len(parts) != 5: continue
+        name = re.sub(r'\\([0-7]{3})', lambda match: chr(int(match.group(1), 8)), parts[0])
+        try:
+            rows.append({'path': name, 'type': parts[1], 'size_kib': int(parts[2]),
+                         'used_kib': int(parts[3]), 'priority': int(parts[4])})
+        except ValueError:
+            continue
+    return rows
+
+
+def can_hibernate(runner=subprocess.run):
+    result = runner(['busctl', '--system', 'call', 'org.freedesktop.login1',
+                     '/org/freedesktop/login1', 'org.freedesktop.login1.Manager', 'CanHibernate'],
+                    capture_output=True, text=True, timeout=10, check=False)
+    if result.returncode:
+        raise RuntimeError('无法查询 logind CanHibernate：' + result.stderr.strip())
+    fields = shlex.split(result.stdout.strip())
+    if len(fields) != 2 or fields[0] != 's':
+        raise RuntimeError('logind CanHibernate 返回了未知格式')
+    return fields[1]
+
+
+def check_ready(paths=Paths(), runner=subprocess.run, *, stat_path=os.stat, lstat_path=os.lstat):
+    report = CheckResult()
+    try:
+        config = load_config(paths.config)
+    except (OSError, ValueError, TypeError, AttributeError) as exc:
+        report.problems.append('无法读取有效的休眠配置：' + str(exc))
+        return report
+    report.facts.update(config)
+    try:
+        for source in (paths.grub_defaults, *sorted(paths.grub_dropins.glob('*.cfg'))):
+            if source.is_file():
+                validate_grub_defaults(source.read_text())
+        running_kernel = paths.kernel_release.read_text().strip()
+        boot_link = paths.boot_kernel
+        # Ubuntu initramfs-tools installations may keep the standard link at /.
+        if boot_link == Path('/boot/vmlinuz') and not boot_link.exists():
+            boot_link = Path('/vmlinuz')
+        boot_image = boot_link.resolve(strict=True).name
+        if not running_kernel or not boot_image.startswith('vmlinuz-'):
+            raise ValueError('无法识别当前或下次启动的内核版本')
+        boot_kernel = boot_image.removeprefix('vmlinuz-')
+        report.facts['running_kernel'] = running_kernel
+        report.facts['next_boot_kernel'] = boot_kernel
+        if running_kernel != boot_kernel:
+            report.problems.append('已安装新内核：当前 ' + running_kernel + '，下次启动 ' + boot_kernel
+                                   + '。请先正常重启，使休眠和恢复使用同一个内核。')
+            report.reboot_required = True
+    except (OSError, ValueError, RuntimeError) as exc:
+        report.problems.append('无法核对休眠前后的内核：' + str(exc))
+    try:
+        command_line = paths.cmdline.read_text()
+        if 'noresume' in shlex.split(command_line):
+            report.problems.append('当前启动参数包含 noresume，恢复功能已禁用。')
+            report.reboot_required = True
+        wanted_resume = 'UUID=' + config['root_uuid']
+        wanted_offset = str(config['resume_offset'])
+        if kernel_arguments(command_line, 'resume') != [wanted_resume]:
+            report.problems.append('当前内核启动参数尚未使用配置中的 resume=UUID。')
+            report.reboot_required = True
+        if kernel_arguments(command_line, 'resume_offset') != [wanted_offset]:
+            report.problems.append('当前内核启动参数尚未使用配置中的 resume_offset。')
+            report.reboot_required = True
+    except (OSError, ValueError) as exc:
+        report.problems.append('无法检查内核启动参数：' + str(exc))
+    try:
+        root_device = stat_path(paths.root).st_dev
+        expected_device = f'{os.major(root_device)}:{os.minor(root_device)}'
+        report.facts['expected_resume_device'] = expected_device
+        report.facts['active_resume_device'] = paths.resume.read_text().strip()
+        if report.facts['active_resume_device'] != expected_device:
+            report.problems.append('当前内核的恢复设备尚未指向根文件系统所在设备。')
+            report.reboot_required = True
+        active_offset = natural_number(paths.resume_offset.read_text().strip(), 'sysfs resume_offset')
+        report.facts['active_resume_offset'] = active_offset
+        if active_offset != config['resume_offset']:
+            report.problems.append('当前内核的恢复偏移与专用 swap 文件不一致。')
+            report.reboot_required = True
+    except (OSError, ValueError) as exc:
+        report.problems.append('无法检查内核恢复设备和偏移：' + str(exc))
+    try:
+        uuid_device = stat_path(paths.uuid_directory / config['root_uuid'])
+        if not stat.S_ISBLK(uuid_device.st_mode):
+            report.problems.append('配置的 UUID 没有指向块设备。')
+        elif uuid_device.st_rdev != stat_path(paths.root).st_dev:
+            report.problems.append('配置的 UUID 与当前根文件系统设备不一致。')
+    except OSError as exc:
+        report.problems.append('无法核对配置 UUID 对应的块设备：' + str(exc))
+    try:
+        swap_file = Path(config['swap_file'])
+        swap_stat = lstat_path(swap_file)
+        if not stat.S_ISREG(swap_stat.st_mode):
+            report.problems.append('专用 swap 路径不是普通文件。')
+        if swap_stat.st_uid != 0 or stat.S_IMODE(swap_stat.st_mode) != 0o600:
+            report.problems.append('专用 swap 文件必须由 root 所有，且权限为 0600。')
+        if 'swap_inode' in config and swap_stat.st_ino != config['swap_inode']:
+            report.problems.append('专用 swap 文件的 inode 已改变，可能被重新创建；需重新核算恢复偏移。')
+        if swap_stat.st_size != config['expected_bytes']:
+            report.problems.append('专用 swap 文件大小与配置不一致。')
+        if swap_stat.st_dev != stat_path(paths.root).st_dev:
+            report.problems.append('专用 swap 文件不在配置所针对的根文件系统上。')
+        active = [row for row in parse_swaps(paths.swaps.read_text())
+                  if row['path'] == config['swap_file'] and row['type'] == 'file']
+        if len(active) != 1:
+            report.problems.append('专用 swap 文件尚未在 /proc/swaps 中启用。')
+        else:
+            row = active[0]
+            page_bytes = os.sysconf('SC_PAGESIZE')
+            if row['size_kib'] * 1024 < config['expected_bytes'] - page_bytes:
+                report.problems.append('活动 swap 容量小于配置值；请检查文件是否被重建。')
+            report.facts['swap_free_kib'] = max(0, row['size_kib'] - row['used_kib'])
+            report.facts['swap_priority'] = row['priority']
+    except (OSError, ValueError) as exc:
+        report.problems.append('无法检查专用 swap 文件：' + str(exc))
+    try:
+        ability = can_hibernate(runner)
+        report.facts['can_hibernate'] = ability
+        if ability not in ('yes', 'challenge'):
+            report.problems.append('logind 当前不允许休眠：CanHibernate=' + ability)
+    except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as exc:
+        report.problems.append(str(exc))
+    return report
+
+
+def notify(title, message, runner=subprocess.run):
+    print(title + '\n' + message, file=sys.stderr)
+    try:
+        runner(['notify-send', '-a', 'DWM', '-i', 'system-suspend-hibernate', title, message],
+               capture_output=True, text=True, timeout=5, check=False)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
+def not_ready_message(report):
+    prefix = '请先保存工作并正常重启一次，再检查休眠。\n' if report.reboot_required else ''
+    return prefix + '\n'.join(report.problems)
+
+
+def show_check(report):
+    print('READY / 静态配置检查通过；实际休眠与恢复仍需验证' if report.ready else 'NOT READY / 休眠条件尚未就绪')
+    if not report.ready: print(not_ready_message(report))
+    for name in ('swap_file', 'running_kernel', 'next_boot_kernel', 'configured_kernel', 'expected_resume_device',
+                 'active_resume_offset', 'can_hibernate', 'backup'):
+        if name in report.facts: print(f'{name}: {report.facts[name]}')
+    return 0 if report.ready else 1
+
+
+def main(argv=None, *, paths=Paths(), runner=subprocess.run, checker=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--check', action='store_true', help='Only check readiness; never open a menu or hibernate')
+    args = parser.parse_args(argv)
+    check = checker if checker is not None else lambda: check_ready(paths, runner)
+    report = check()
+    if args.check: return show_check(report)
+    if not report.ready:
+        notify('休眠尚未就绪', not_ready_message(report), runner)
+        return 1
+    try:
+        selection = runner(['dmenu', '-i', '-l', '2', '-p', '保存当前会话到磁盘并关机？'],
+                           input=CANCEL + '\n' + CONFIRM + '\n', text=True,
+                           capture_output=True, check=False)
+    except OSError as exc:
+        notify('无法打开休眠确认菜单', str(exc), runner)
+        return 1
+    if selection.returncode != 0 or selection.stdout.strip() != CONFIRM:
+        return 0
+    # Recheck after confirmation, in case swap or kernel state changed while the menu was open.
+    report = check()
+    if not report.ready:
+        notify('休眠状态已改变，操作已取消', not_ready_message(report), runner)
+        return 1
+    try:
+        result = runner(['systemctl', 'hibernate'], capture_output=True, text=True, check=False)
+    except OSError as exc:
+        notify('无法请求休眠', str(exc), runner)
+        return 1
+    if result.returncode:
+        notify('休眠请求失败', result.stderr.strip() or '请在终端检查 systemctl hibernate 的提示。', runner)
+        return result.returncode
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
