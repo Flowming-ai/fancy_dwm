@@ -78,3 +78,61 @@ image are explicitly reported and preserved; this path does not claim to have
 applied those policies. For state created by this module, a changed effective
 policy blocks reapplication pending review. Rollback for this module is
 separate from desktop configuration rollback.
+
+## Optional memory preparation for snapshot allocation failures
+
+If the journal reports `Error -12 creating image` or `Cannot allocate memory`,
+free swap alone does not prove that enough RAM exists for the temporary copy.
+The optional guard below prepares memory **before** NVIDIA switches VTs or
+systemd begins the sleep operation. It requires an existing hibernation setup,
+a cgroup v2 user slice, and Linux 6.12 or newer. It is not installed automatically
+on unrelated machines.
+
+```sh
+python3 scripts/hibernate/install-memory-guard.py --user "$(id -un)"
+sudo python3 scripts/hibernate/install-memory-guard.py --apply --user "$(id -un)"
+```
+
+The first command is a read-only preview. The second installs a root-owned
+helper and required, ordered systemd dependencies. It does not initiate sleep,
+reboot, or memory reclaim. Its default target is 67% available physical memory;
+this is a conservative mitigation based on one machine's successful versus
+failed cycles, not a prediction of the kernel image size. Optional
+`--available-percent 50..80` and `--max-reclaim-gib 1..16` tune the policy.
+
+At each plain hibernation attempt, it requests reclaim from `user.slice` in
+chunks of at most 256 MiB, for at most 45 seconds and 10 GiB of cumulative
+requests. The kernel may reclaim more or less than requested. It rechecks RAM
+and **the dedicated hibernation swap's** free space after each request. A swap
+reserve of half physical RAM plus 2 GiB is retained. Busy applications can
+refault pages; failure to reach the threshold cancels hibernation before GPU
+preparation and displays a notification. No applications are terminated, no
+user processes are frozen, and no persistent memory limits are changed. This
+may add disk activity and make subsequent application access briefly slower.
+
+For NVIDIA, installation checks the vendor VT marker contract and adds a
+condition to avoid calling the resume unit when no GPU preparation occurred.
+The vendor post-sleep hook remains intact. Review/reapply this optional module
+after changes to NVIDIA's sleep scripts. Suspend-to-RAM and
+suspend-then-hibernate are outside this guard's scope.
+
+Read-only inspection and a **memory-only** preparation test:
+
+```sh
+python3 /usr/local/libexec/dwm-hibernate-memory --check
+sudo systemctl start dwm-hibernate-memory.service
+journalctl -u dwm-hibernate-memory.service -b --no-pager
+cat /run/dwm-hibernate-memory.json
+```
+
+Starting this guard by itself does not start the hibernation or NVIDIA units.
+The service does not retain an active success state: each later sleep attempt
+runs fresh checks. Passing preparation is not proof of a successful physical
+power-off/resume cycle or of graphics-driver compatibility. Save work before
+a real test. The installer prints an independent rollback command under
+`/var/backups/dwm-hibernate/portable-*`; it restores the previous hooks and
+helper without changing swap layout or starting any power operation.
+
+Implementation references: [kernel memory.reclaim interface](https://docs.kernel.org/admin-guide/cgroup-v2.html#memory-interface-files),
+[Linux snapshot allocation](https://github.com/torvalds/linux/blob/v7.0/kernel/power/snapshot.c),
+and [systemd dependency semantics](https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html).

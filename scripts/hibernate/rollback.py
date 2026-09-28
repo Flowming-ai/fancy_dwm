@@ -23,6 +23,11 @@ ALLOWED = {
     '/etc/systemd/system/systemd-hibernate.service.d/20-dwm-minimal-image.conf',
     '/etc/polkit-1/rules.d/49-dwm-hibernate.rules',
     '/var/lib/dwm-hibernate/config.json', '/boot/grub/grub.cfg',
+    '/etc/dwm-hibernate-memory.json', '/usr/local/libexec/dwm-hibernate-memory',
+    '/etc/systemd/system/dwm-hibernate-memory.service',
+    '/etc/systemd/system/systemd-hibernate.service.d/30-dwm-memory-guard.conf',
+    '/etc/systemd/system/nvidia-hibernate.service.d/30-dwm-memory-guard.conf',
+    '/etc/systemd/system/nvidia-resume.service.d/30-dwm-memory-guard.conf',
 }
 
 
@@ -82,6 +87,15 @@ def atomic_restore(source, target):
             os.unlink(name)
 
 
+def refuse_active_transition():
+    result = subprocess.run(['/usr/bin/systemctl', 'list-jobs', '--no-legend', '--no-pager'],
+                            capture_output=True, text=True, timeout=15)
+    if result.returncode:
+        raise RuntimeError('Cannot check pending power operations: ' + result.stderr.strip())
+    if re.search(r'dwm-hibernate-memory\.service|(?:hibernate|suspend|sleep)\.(service|target)', result.stdout):
+        raise RuntimeError('Wait until the power transition or memory preparation has finished before rollback')
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--apply', action='store_true')
@@ -97,6 +111,7 @@ def main(argv=None):
         return 0
     if os.geteuid() != 0:
         raise RuntimeError('Rollback requires sudo')
+    refuse_active_transition()
     errors = []
     for name, existed in manifest.items():
         target = Path(name)
